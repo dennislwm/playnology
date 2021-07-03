@@ -1,0 +1,13 @@
+---
+- hosts: "{{ var_host | default('azure') }}"
+  become: yes
+  tasks:
+  - name: Update yum
+    shell: yum -y update
+
+  - name: Disable SELinux and reboot
+    # Edit SELinux
+    #   sudo vi /etc/selinux/config
+    # Change
+    #   SELINUX=disabled
+    shell: reboot

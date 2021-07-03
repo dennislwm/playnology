@@ -1,0 +1,16 @@
+---
+- hosts: "{{ var_host | default('all') }}"
+  become: yes
+  tasks:
+  - name: task_get_sys_info
+    shell: |
+      echo "[size used avail use%]" $( df / -h | grep \/ )
+      echo "[total used free]" $( free -h | grep Mem )
+    register: get_sys_info
+  - debug: msg="{{ get_sys_info.stdout }}"
+  
+  - name: Populate service facts
+    service_facts:
+  - debug:
+      msg: Docker installed!
+    when: "'docker' in services"

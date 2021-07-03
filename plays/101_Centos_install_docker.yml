@@ -1,0 +1,53 @@
+---
+- hosts: "{{ var_host | default('azure') }}"
+  become: yes
+  tasks:
+  - name: task_repo_exist
+    stat:
+      path: /etc/yum.repos.d/docker-ce.repo
+    register: repo_exist
+  - debug:
+      msg: "Path and file not found"
+    when: repo_exist.stat.exists == False
+
+  - name: Install pre-requisite packages
+    yum:
+      name: "{{ item }}"
+      state: latest
+    loop:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+    when: repo_exist.stat.exists == False
+
+  - name: Add Docker CE repo
+    get_url:
+      url: https://download.docker.com/linux/centos/docker-ce.repo
+      dest: /etc/yum.repos.d/docker-ce.repo
+    when: not repo_exist.stat.exists
+
+  - name: Install Docker
+    yum: name=docker state=latest
+    when: not repo_exist.stat.exists
+
+  - name: task_compose_exist
+    stat:
+      path: /usr/bin/docker-compose
+    register: compose_exist
+  - debug:
+      msg: "Docker-compose not found"
+    when: compose_exist.stat.exists == False
+
+  - name: Ensure docker-compose is installed and available
+    get_url: 
+      url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
+      dest: /usr/bin/docker-compose
+      mode: 'u+x,g+x'
+    when: compose_exist.stat.exists == False
+
+  - name: Start and enable the Docker daemon
+    # Edit SELinux
+    #   sudo vi /etc/selinux/config
+    # Change
+    #   SELINUX=disabled
+    service: name=docker state=started enabled=yes

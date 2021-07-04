@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: objMysql
+    environment:
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: changeme
+      MYSQL_ROOT_PASSWORD: changeme
+    restart: unless-stopped
+    volumes:
+      - vol_mysql:/var/lib/mysql:rw
+    networks:
+      - net_private
+  
+volumes: 
+  vol_mysql:
+  # Named volumes are stored in a part of the host filesystem 
+  # which is managed by Docker (/var/lib/docker/volumes/ on Linux)
+  # Docker appends [FOLDER] name to named volumes.
+  #   <folder>_<vol_name>
+
+networks:
+  net_private:
+  # Docker appends [FOLDER] name to named networks.
+  #   <folder>_<net_name>

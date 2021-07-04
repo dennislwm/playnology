@@ -1,5 +1,5 @@
 ---
-- hosts: "{{ var_host | default('azure') }}"
+- hosts: "{{ var_host | default('none') }}"
   become: yes
   tasks:
   - name: task_repo_exist

@@ -1,28 +1,22 @@
 ---
-- hosts: "{{ var_host | default('all') }}"
+- hosts: "{{ var_host | default('none') }}"
   become: yes
   tasks:
   - name: Ensure compose dir exists
     file: 
-      path: /home/{{ ansible_user }}/docker/{{ item }}
+      path: /home/{{ ansible_user }}/docker/{{ var_item | default('nginxpmlite') }}
       state: directory
       mode: 0755
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"      
       recurse: yes
-    loop:
-    - nginxpmlite
 
   - name: Push compose files
     copy:
-      src: ../docker/{{ item }}/docker-compose.yml
-      dest: /home/{{ ansible_user }}/docker/{{ item }}/docker-compose.yml
+      src: ../docker/{{ var_item | default('nginxpmlite') }}/docker-compose.yml
+      dest: /home/{{ ansible_user }}/docker/{{ var_item | default('nginxpmlite') }}/docker-compose.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"      
-    loop:
-    - nginxpmlite
 
   - name: Deploy compose file
-    shell: docker-compose -f /home/{{ ansible_user }}/docker/{{ item }}/docker-compose.yml up
-    loop:
-    - nginxpmlite
+    shell: docker-compose -f /home/{{ ansible_user }}/docker/{{ var_item | default('nginxpmlite') }}/docker-compose.yml up -d

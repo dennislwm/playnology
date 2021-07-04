@@ -1,8 +1,11 @@
 version: "3"
 services:
   nginxpm:
+    depends_on:
+      - portainer
     image: 'jlesage/nginx-proxy-manager'
-    restart: always
+    restart: unless-stopped
+    container_name: objNginxpm
     ports:
       # Public HTTP Port:
       - '80:8080'
@@ -20,15 +23,14 @@ services:
       DISABLE_IPV6: 1
     volumes:
       - vol_config:/config:rw
-    depends_on:
-      - portainer
     networks:
       - net_public
 
   portainer:
     image: portainer/portainer
+    container_name: objPortainer
     command: -H unix:///var/run/docker.sock
-    restart: always
+    restart: unless-stopped
     ports:
       - 9000:9000
       - 8000:8000

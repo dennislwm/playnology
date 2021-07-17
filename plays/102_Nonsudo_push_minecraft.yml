@@ -1,0 +1,66 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  become: yes
+
+  tasks:
+  - name: Get PATH
+    command: echo "$PATH"
+    register: default_path
+
+  - name: Push java file
+    copy:
+      #
+      # If src path is a directory, it is copied recursively. If path ends with "/", 
+      # only inside contents of that directory are copied to destination.
+      #
+      src: ../artifact/openjdk-8u41-b04-linux-x64-14_jan_2020.tar.gz
+      dest: ~/
+      force: no
+
+  - name: Unpack java
+    unarchive:
+      src: ~/openjdk-8u41-b04-linux-x64-14_jan_2020.tar.gz
+      dest: ~/
+      remote_src: yes
+      keep_newer: yes
+
+  - name: Push minecraft file
+    copy:
+      #
+      # If src path is a directory, it is copied recursively. If path ends with "/", 
+      # only inside contents of that directory are copied to destination.
+      #
+      src: ../artifact/{{ var_item | default('none') }}.tar.gz
+      dest: ~/
+      force: no
+
+  - name: Unpack minecraft
+    unarchive:
+      src: ~/{{ var_item | default('none') }}.tar.gz
+      dest: ~/
+      remote_src: yes
+      keep_newer: yes
+
+  - name: Export JAVA_HOME
+    lineinfile:
+      path: ~/.bashrc
+      regexp: '^export JAVA_HOME'
+      line: export JAVA_HOME=/home/cloud_user/java-se-8u41-ri
+
+  - name: Export PATH
+    lineinfile:
+      path: ~/.bashrc
+      regexp: '^PATH=$PATH:/home/cloud_user/java'
+      line: PATH=$PATH:/home/cloud_user/java-se-8u41-ri/bin
+
+  - name: Set server.port to 30000
+    lineinfile:
+      path: ~/{{ var_item | default('none') }}/server.properties
+      regexp: '^server-port='
+      line: server-port=30000
+
+  - name: Set online-mode to false
+    lineinfile:
+      path: ~/{{ var_item | default('none') }}/server.properties
+      regexp: '^online-mode='
+      line: online-mode=false

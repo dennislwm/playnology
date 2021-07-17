@@ -1,0 +1,39 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  become: no
+  tasks:
+  - name: Set server.port to default
+    lineinfile:
+      path: ~/{{ var_item | default('none') }}/server.properties
+      regexp: '^server-port='
+      line: server-port=25565
+
+  - name: Remove JAVA_HOME
+    lineinfile:
+      path: ~/.bashrc
+      regexp: '^export JAVA_HOME'
+      state: absent
+
+  - name: Remove PATH
+    lineinfile:
+      path: ~/.bashrc
+      regexp: 'java-se-8u41-ri'
+      state: absent
+
+  - name: Pack minecraft
+    shell: tar czvf {{ ansible_date_time.date }}.{{ var_item | default('none') }}.tar.gz ~/{{ var_item | default('none') }}
+
+  - name: Fetch minecraft
+    fetch:
+      src: ~/{{ ansible_date_time.date }}.{{ var_item | default('none') }}.tar.gz
+      dest: ../artifact/
+      flat: yes
+
+  - name: Remove minecraft
+    shell: rm -rf ~/{{ var_item | default('none') }}
+
+  - name: Remove java
+    shell: rm -rf ~/java-se-8u41-ri
+
+  - name: Remove artifacts
+    shell: rm ~/*.tar.gz

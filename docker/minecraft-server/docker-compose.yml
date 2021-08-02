@@ -1,0 +1,40 @@
+version: "3"
+services:
+  minecraft:
+    # Alpine Java 11 image
+    image: itzg/minecraft-server:adopt11
+    container_name: objMinecraftserver    
+    ports:
+      # Host on port 25566 - I'm hosting another server on 25565!
+      - 25566:25565
+    environment:
+      EULA: "TRUE" # You must accept the EULA
+      TYPE: "PAPER" # Lightweight Minecraft server, use "VANILLA" for a vanilla server
+      VERSION: "1.16.5"
+      MEMORY: "1G"
+      USE_AIKAR_FLAGS: "true" # Predetermined JVM flags for optimal server performance
+      
+      # Server properties
+      OVERRIDE_SERVER_PROPERTIES: "true" # Always override server.properties
+      SPAWN_PROTECTION: "0"
+      DIFFICULTY: "normal"
+      MOTD: "A Minecraft Server for v1.16.5"
+    stdin_open: true # Keep stdin open
+    tty: true # Allow for tty output
+    restart: unless-stopped
+    volumes:
+      - vol_data:/data
+      #- /etc/timezone:/etc/timezone:ro # Sync server timezone
+    networks:
+      - nginxpm_net_public
+
+volumes:
+  vol_data:
+  # Named volumes are stored in a part of the host filesystem 
+  # which is managed by Docker (/volume1/docker/ on Synology)
+  # Docker appends [FOLDER] name to named volumes.
+  #   <folder>_<vol_name>
+
+networks:
+  nginxpm_net_public:
+    external: true    

@@ -20,6 +20,13 @@
     - lvm2
     when: repo_exist.stat.exists == False
 
+  #
+  # Oracle Linux requires the following file:
+  #   /etc/yum.repos.d/oraclelinux-developer-ol7.repo
+  #     [ol7_developer]
+  #     enabled=1
+  #
+
   - name: Add Docker CE repo
     get_url:
       url: https://download.docker.com/linux/centos/docker-ce.repo
@@ -28,26 +35,6 @@
 
   - name: Install Docker
     yum: name=docker state=latest
-    when: not repo_exist.stat.exists
-
-  - name: task_compose_exist
-    stat:
-      path: /usr/bin/docker-compose
-    register: compose_exist
-  - debug:
-      msg: "Docker-compose not found"
-    when: compose_exist.stat.exists == False
-
-  - name: Ensure docker-compose is installed and available
-    get_url: 
-      url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
-      dest: /usr/bin/docker-compose
-      mode: 'u+x,g+x'
-    when: compose_exist.stat.exists == False
 
   - name: Start and enable the Docker daemon
-    # Edit SELinux
-    #   sudo vi /etc/selinux/config
-    # Change
-    #   SELINUX=disabled
     service: name=docker state=started enabled=yes

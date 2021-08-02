@@ -1,0 +1,22 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  become: yes
+  tasks:
+  - name: Ensure compose dir exists
+    file: 
+      path: /var/services/homes/{{ ansible_user }}/docker-compose/{{ var_item | default('nginxpmlite') }}
+      state: directory
+      mode: 0755
+      recurse: yes
+  
+  - name: Push compose files
+    copy:
+      #
+      # If src path is a directory, it is copied recursively. If path ends with "/", 
+      # only inside contents of that directory are copied to destination.
+      #
+      src: ../docker/{{ var_item | default('nginxpmlite') }}
+      dest: /var/services/homes/{{ ansible_user }}/docker-compose
+
+  - name: Deploy compose file
+    shell: /usr/local/bin/docker-compose -f /var/services/homes/{{ ansible_user }}/docker-compose/{{ var_item | default('nginxpmlite') }}/docker-compose.yml up -d

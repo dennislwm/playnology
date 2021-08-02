@@ -1,0 +1,22 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  become: yes
+  tasks:
+  - name: task_compose_exist
+    stat:
+      path: /usr/bin/docker-compose
+    register: compose_exist
+  - debug:
+      msg: "Docker-compose not found"
+    when: compose_exist.stat.exists == False
+
+  #
+  # Oracle Linux requires ARM64 binaries
+  #
+
+  - name: Ensure docker-compose is installed and available
+    get_url: 
+      url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-x86_64
+      dest: /usr/bin/docker-compose
+      mode: 'u+x,g+x'
+    when: compose_exist.stat.exists == False

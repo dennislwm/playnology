@@ -5,9 +5,9 @@
   - name: Update yum
     shell: yum -y update
 
-  - name: Disable SELinux and reboot
-    # Edit SELinux
-    #   sudo vi /etc/selinux/config
-    # Change
-    #   SELINUX=disabled
+  - name: Disable SELinux
+    selinux:
+      state: disabled
+
+  - name: Reboot
     shell: reboot

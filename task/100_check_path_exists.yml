@@ -1,0 +1,11 @@
+#
+# URL: https://docs.ansible.com/ansible/latest/collections/ansible/builtin/file_module.html
+#
+- name: check_path_exists
+  file: 
+    path: "{{ var_path }}"
+    owner: "{{ var_owner }}"
+    group: "{{ var_group }}"
+    mode: '0755'
+    recurse: yes
+    state: directory

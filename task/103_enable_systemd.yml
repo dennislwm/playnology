@@ -1,0 +1,8 @@
+#
+# URL: https://docs.ansible.com/ansible/latest/collections/ansible/builtin/systemd_module.html
+#
+- name: Enable service and ensure it is started
+  ansible.builtin.systemd:
+    name: "{{ var_service }}"
+    enabled: yes
+    state: started

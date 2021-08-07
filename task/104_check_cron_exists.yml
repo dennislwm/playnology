@@ -1,0 +1,10 @@
+#
+# URL: https://docs.ansible.com/ansible/latest/collections/ansible/builtin/cron_module.html
+#
+- name: check_cron_exists
+  ansible.builtin.cron:
+    name: "{{ var_name }}"
+    user: "{{ var_user }}"
+    minute: "0"
+    hour: "{{ var_hour }}"
+    job: "{{ var_job }}"

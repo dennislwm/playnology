@@ -1,0 +1,29 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  gather_facts: no
+
+  name: Linux_cron_sh
+  become: true
+  #--------------------------------------------------------------
+  # Use `--extra-vars` to override hosts on command line
+  #   ansible-playbook -i hosts --extra-vars "var_host=<host>"
+  #--------------------------------------------------------------
+  
+  tasks:
+    - include: ../task/101_check_file_exists.yml
+      vars:
+        var_file: ../artifact/tarbkp.sh
+        var_path: /home/opc/minecraft/
+        var_owner: opc
+        var_group: opc
+        var_mode: "0755"
+
+    - include: ../task/104_check_cron_exists.yml
+      #
+      # GMT is 8 hours behind SGT
+      # 
+      vars:
+        var_name: "tarbkp_minecraft"
+        var_user: opc
+        var_hour: "17"
+        var_job: "/home/opc/minecraft/tarbkp.sh"

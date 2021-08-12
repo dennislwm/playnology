@@ -5,4 +5,4 @@
     owner: "{{ var_owner }}"
     group: "{{ var_group }}"
     mode: "{{ var_mode }}"
-    force: no
+    force: "{{ var_force | default('no') }}"

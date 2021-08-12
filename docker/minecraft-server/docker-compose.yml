@@ -26,7 +26,7 @@ services:
       - vol_data:/data
       #- /etc/timezone:/etc/timezone:ro # Sync server timezone
     networks:
-      - nginxpm_net_public
+      - nginxpmlite_net_public
 
 volumes:
   vol_data:
@@ -36,5 +36,5 @@ volumes:
   #   <folder>_<vol_name>
 
 networks:
-  nginxpm_net_public:
+  nginxpmlite_net_public:
     external: true    

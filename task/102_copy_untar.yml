@@ -1,5 +1,5 @@
 - name: Copy and unpack tar
   ansible.builtin.unarchive:
-    src: "../artifact/{{ var_file | default('none') }}"
+    src: "{{ var_file | default('none') }}.tar.gz"
     dest: "{{ var_path }}"
     keep_newer: yes

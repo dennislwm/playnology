@@ -1,3 +1,6 @@
+.DS_Store
 *rc.sh
+*.cfg
+*.tar.gz
 secret
 hosts

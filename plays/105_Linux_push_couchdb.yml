@@ -1,0 +1,31 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  gather_facts: no
+
+  name: Linux_push_couchdb
+  become: yes
+  #--------------------------------------------------------------
+  # Use `--extra-vars` to override hosts on command line
+  #   ansible-playbook -i hosts --extra-vars "var_host=<host>"
+  #--------------------------------------------------------------
+  
+  tasks:
+    - include: ../task/100_check_path_exists.yml
+      vars:
+        var_path: /home/azureuser/docker/couchdb
+        var_owner: azureuser
+        var_group: azureuser
+
+    - include: ../task/101_check_file_exists.yml
+      vars:
+        var_file: ../docker/couchdb/docker-compose.yml
+        var_path: /home/azureuser/docker/couchdb/
+        var_owner: azureuser
+        var_group: azureuser
+        var_mode: "0644"
+        var_force: yes
+        
+    - include: ../task/102_copy_untar.yml
+      vars:
+        var_file: /Users/dennislwm/docker/couchdb
+        var_path: /home/azureuser/docker/

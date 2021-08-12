@@ -1,0 +1,6 @@
+---
+- hosts: "{{ var_host | default('none') }}"
+  become: yes
+  tasks:
+  - name: Prune compose file
+    shell: /usr/local/bin/docker-compose -f /var/services/homes/{{ ansible_user }}/docker-compose/{{ var_item | default('nginxpmlite') }}/docker-compose.yml down -v

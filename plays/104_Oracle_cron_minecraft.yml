@@ -2,7 +2,7 @@
 - hosts: "{{ var_host | default('none') }}"
   gather_facts: no
 
-  name: Linux_cron_sh
+  name: Oracle_cron_minecraft
   become: true
   #--------------------------------------------------------------
   # Use `--extra-vars` to override hosts on command line

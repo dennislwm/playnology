@@ -1,18 +1,39 @@
 # playnology
 
 Ansible starter project for your Synology NAS.
+<!-- TOC -->
 
 - [playnology](#playnology)
-  - [Installing Ansible](#installing-ansible)
-  - [Creating a basic inventory file](#creating-a-basic-inventory-file)
-  - [Running your first Ad-Hoc Ansible command](#running-your-first-ad-hoc-ansible-command)
-  - [Your first Ansible playbook](#your-first-ansible-playbook)
-  - [Troubleshooting](#troubleshooting)
-    - [Using SSH connection type with passwords](#using-ssh-connection-type-with-passwords)
-    - [Too many authentication failure](#too-many-authentication-failure)
-    - [You are still asked by SSH to enter a password](#you-are-still-asked-by-ssh-to-enter-a-password)
-    - [Missing sudo password](#missing-sudo-password)
-  - [References](#references)
+- [Installing Ansible](#installing-ansible)
+- [Creating a basic inventory file](#creating-a-basic-inventory-file)
+- [Running your first Ad-Hoc Ansible command](#running-your-first-ad-hoc-ansible-command)
+- [Your first Ansible playbook](#your-first-ansible-playbook)
+- [Docker-compose Deployment with SSH](#docker-compose-deployment-with-ssh)
+- [Docker-compose Deployment with Portainer Stack](#docker-compose-deployment-with-portainer-stack)
+- [Docker-compose Deployment with Portainer Containers](#docker-compose-deployment-with-portainer-containers)
+- [Troubleshooting](#troubleshooting)
+  - [Using SSH connection type with passwords](#using-ssh-connection-type-with-passwords)
+  - [Too many authentication failure](#too-many-authentication-failure)
+  - [You are still asked by SSH to enter a password](#you-are-still-asked-by-ssh-to-enter-a-password)
+  - [Missing sudo password](#missing-sudo-password)
+- [Synology](#synology)
+  - [Changing SSH Password](#changing-ssh-password)
+    - [Enabling SSH](#enabling-ssh)
+    - [Temporarily Enabling Telnet](#temporarily-enabling-telnet)
+  - [Connecting via SSH](#connecting-via-ssh)
+  - [Installing Portainer](#installing-portainer)
+  - [Adding Docker container](#adding-docker-container)
+    - [Using Docker Compose](#using-docker-compose)
+    - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
+    - [Dangerous](#dangerous)
+    - [Using Portainer](#using-portainer)
+      - [Basic Container Settings](#basic-container-settings)
+      - [Advanced Container Settings](#advanced-container-settings)
+  - [NGINX Proxy Manager](#nginx-proxy-manager)
+    - [Enabling Port Forwarding on Router](#enabling-port-forwarding-on-router)
+- [References](#references)
+
+<!-- /TOC -->
 
 # Installing Ansible
 
@@ -89,6 +110,241 @@ Now that you've created your first Ansible playbook, it is time to run it.
 ansible-playbook -i ./hosts plays/check-linux-system-playbook.yml
 ```
 
+# Docker-compose Deployment with SSH
+
+1. Open a local terminal and remote SSH to your Synology NAS.
+
+```sh
+ssh admin@IP_ADDRESS
+```
+
+2. Navigate to the path `~/docker-compose/paperless`, where HOME folder is `/var/services/homes/admin/`.
+
+3. Run docker-compose with `sudo` privileges.
+
+```sh
+sudo docker-compose.yml
+```
+
+4. Ensure that the `USERMAP_UID` and `USERMAP_GID` is unused.
+
+```sh
+cat /etc/passwd | grep 1000
+```
+
+5. Create a paperless admin user. 
+
+```sh
+docker exec -it paperlessng_webserver_1 python3 /usr/src/paperless/src/manage.py createsuperuser --username=admin --
+```
+
+---
+# Docker-compose Deployment with Portainer Stack
+
+1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
+
+2. Click on **Stacks** -> **+ Add stack**.
+
+- Name: paperlessng
+
+Navigate to the section **Build method**, and click on **Upload**, then **Select file**. Select your `docker-compose.yml` file.
+
+```yml
+# docker-compose file for running paperless from the Docker Hub.
+# This file contains everything paperless needs to run.
+# Paperless supports amd64, arm and arm64 hardware.
+#
+# All compose files of paperless configure paperless in the following way:
+#
+# - Paperless is (re)started on system boot, if it was running before shutdown.
+# - Docker volumes for storing data are managed by Docker.
+# - Folders for importing and exporting files are created in the same directory
+#   as this file and mounted to the correct folders inside the container.
+# - Paperless listens on port 8010.
+#
+# In addition to that, this docker-compose file adds the following optional
+# configurations:
+#
+# - Instead of SQLite (default), PostgreSQL is used as the database server.
+#
+# To install and update paperless with this file, do the following:
+#
+# - Open portainer Stacks list and click 'Add stack'
+# - Paste the contents of this file and assign a name, e.g. 'Paperless'
+# - Click 'Deploy the stack' and wait for it to be deployed
+# - Open the list of containers, select paperless_webserver_1
+# - Click 'Console' and then 'Connect' to open the command line inside the container
+# - Run 'python3 manage.py createsuperuser' to create a user
+# - Exit the console
+#
+# For more extensive installation and update instructions, refer to the
+# documentation.
+
+version: "2"
+services:
+  broker:
+    image: redis:6.0
+    restart: unless-stopped
+    volumes:
+      - vol_redis:/data
+    networks:
+      - net_private
+
+  db:
+    image: postgres:13
+    restart: unless-stopped
+    volumes:
+      - vol_postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+    networks:
+      - net_private
+
+  webserver:
+    image: jonaswinkler/paperless-ng:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - broker
+    ports:
+      - 8080:8000
+      # URL: http://localhost:8080/
+    volumes:
+      - vol_data:/usr/src/paperless/data
+      - vol_media:/usr/src/paperless/media
+      - /var/services/homes/admin/docker-compose/paperless/export:/usr/src/paperless/export
+      - /var/services/homes/admin/docker-compose/paperless/consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+# The UID and GID of the user used to run paperless in the container. Set this
+# to your UID and GID on the host so that you have write access to the
+# consumption directory.
+      USERMAP_UID: 1000
+      USERMAP_GID: 1000
+# Additional languages to install for text recognition, separated by a
+# whitespace. Note that this is
+# different from PAPERLESS_OCR_LANGUAGE (default=eng), which defines the
+# language used for OCR.
+# The container installs English, German, Italian, Spanish and French by
+# default.
+# See https://packages.debian.org/search?keywords=tesseract-ocr-&searchon=names&suite=buster
+# for available languages.
+      #PAPERLESS_OCR_LANGUAGES: tur ces
+# Adjust this key if you plan to make paperless available publicly. It should
+# be a very long sequence of random characters. You don't need to remember it.
+      #PAPERLESS_SECRET_KEY: change-me
+# Use this variable to set a timezone for the Paperless Docker containers. If not specified, defaults to UTC.
+      PAPERLESS_TIME_ZONE: Asia/Singapore
+# The default language to use for OCR. Set this to the language most of your
+# documents are written in.
+      #PAPERLESS_OCR_LANGUAGE: eng
+    networks:
+      - net_public
+      - net_private
+
+volumes:
+  vol_redis:
+  vol_postgres:
+  vol_data:
+  vol_media:
+  # Named volumes are stored in a part of the host filesystem 
+  # which is managed by Docker (/volume1/@docker/volumes/ on Synology)
+  # Docker appends [FOLDER] name to named volumes.
+  #   paperlessng_vol_data
+
+networks:
+  net_public:
+  net_private:
+  # Docker appends [FOLDER] name to named networks.
+  #   paperlessng_net_public
+  #   paperlessng_net_private
+```
+
+3. Open the container `paperless_webserver_1`. Navigate to **Connected networks**, and select a network `bridge`. Then, click **Join network**.
+
+4. Navigate to the **Container status**, and click on **>_ Console**. Then, click **Connect** and type the following command:
+
+```sh
+python3 /usr/src/paperless/src/manage.py createsuperuser --username=admin
+```
+
+This command will create a superuser `admin`. Enter your email and password when prompted. Type `exit` when done.
+
+5. Navigate to the **Container status**, and click on **Logs**. Check if there are any errors in the log.
+
+---
+# Docker-compose Deployment with Portainer Containers
+
+1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
+
+2. Add volumes for all containers. Click on **Volumes** -> **+ Add volume**.
+
+- Name: paperless_vol_redis
+
+Click **Create the volume**. Do this for all the volumes.
+
+3. Add the database container. Click on **+ Add container** button and enter the database info.
+
+- Name: paperless_redis
+- Image: redis:6.0
+
+Navigate to the section **Advanced container settings**, click on **Volumes** -> **+ map additional volume**.
+
+- container: /data
+- volume: paperless_vol_redis
+
+Navigate to **Network**, and select `nginxpm_net_private`.
+
+Navigate to **Restart policy**, and select **Unless stopped**.
+
+Click **Deploy the container** and your database container should start. Do this for all the databases.
+
+4. Add the web server container. Click on **+ Add container** button and enter the application info.
+
+- Name: paperless_app
+- Image jonaswinkler/paperless-ng:latest
+
+Navigate to the section **Network ports configuration**, click on **+ publish a new network port**.
+
+- host: 8080
+- container: 8000
+
+Navigate to the section **Advanced container settings**, click on **Volumes** -> **+ map additional volume**.
+
+- container: /usr/src/paperless/data
+- volume: paperless_vol_data
+
+- container: /usr/src/paperless/media
+- volume: paperless_vol_media
+
+- container: /usr/src/paperless/export
+- volume: /var/services/homes/admin/docker-compose/paperless/export
+
+- container: /usr/src/paperless/consume
+- volume: /var/services/homes/admin/docker-compose/paperless/consume
+
+Navigate to **Network**, and select `bridge`. Also, add `nginxpm_net_private`.
+
+Navigate to **Env**, and click on **+ add environment variable**.
+
+- name: PAPERLESS_REDIS
+- value: redis://paperless_redis:6379
+
+- name: PAPERLESS_DBHOST
+- value: paperless_db
+
+- name: USERMAP_UID
+- value: 1000
+
+- name: USERMAP_GID
+- value: 1000
+
+Navigate to **Restart policy**, and select **Unless stopped**.
+
+---
 # Troubleshooting
 
 ## Using SSH connection type with passwords
@@ -373,18 +629,18 @@ Click on `Deploy the container`.
 
 You may need to enable port forwarding on both your Google Home WiFi and router.
 
+---
 # References
+The following resources were used as a single-use reference.
 
-* Ansible for DevOps
-
-* [How to build your inventory — Ansible Documentation](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)
-
-* [Setup and install Portainer on Synology NAS](https://nashosted.com/setup-and-install-portainer-on-synology-nas) 
-
-* [Synology Docker Media Server with Traefik, Docker Compose, and Cloudflare](https://www.smarthomebeginner.com/synology-docker-media-server)
-
-# Troubleshooting
-
-* [Prevent DSM Listening on Port 80/443](https://www.reddit.com/r/synology/comments/ahs3xh/prevent_dsm_listening_on_port_80443)
-
-* [DSM broken after latest Update](https://community.synology.com/enu/forum/17/post/96886)
+| Title | Author | Publisher Date [Short Code]
+|---|---|---|
+| [Authelia - SSO and 2FA portal](https://www.blackvoid.club/authelia-sso-and-2fa-portal/) | Luke Manestar | May 2021
+| [NGINX proxy manager](https://www.blackvoid.club/nginx-proxy-manager/) | Luke Manestar | Apr 2021
+| GitHub repo: [CLI client for Portainer](https://github.com/greenled/portainer-stack-utils) | Juan Carlos Mejías Rodríguez | Oct 2019
+| Ansible for DevOps
+| [How to build your inventory ](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html) | Ansible Documentation | 2022
+| [Synology Docker Media Server with Traefik, Docker Compose, and Cloudflare](https://www.smarthomebeginner.com/synology-docker-media-server) | Anand | Jul 2020
+| [Prevent DSM Listening on Port 80/443](https://www.reddit.com/r/synology/comments/ahs3xh/prevent_dsm_listening_on_port_80443)
+| [DSM broken after latest Update](https://community.synology.com/enu/forum/17/post/96886)
+| [Prevent DSM Listening on Port 80/443](https://www.reddit.com/r/synology/comments/ahs3xh/prevent_dsm_listening_on_port_80443/)

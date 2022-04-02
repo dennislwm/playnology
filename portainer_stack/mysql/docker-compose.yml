@@ -1,0 +1,40 @@
+version: '2'
+# (1) Deploy Portainer stack:
+#   - Open portainer Stacks list and click 'Add stack'
+#   - Paste the contents of this file and assign a name, e.g. 'mysql'
+#   - Click 'Deploy the stack' and wait for it to be deployed
+# (2) Expose Phpmyadmin on Synology LAN
+#   - Open the list of containers, select objPhpmyadmin
+#   - Scroll down to Connected networks
+#   - Select network 'bridge' and click Join network.
+services:
+  mysql:
+    image: mysql:latest
+    container_name: objMysql
+    volumes:
+      - vol_mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+    ports:
+      - 3306:3306
+    restart: unless-stopped
+    networks:
+      - net_private
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: objPhpmyadmin
+    ports:
+      - 8080:80
+    environment:
+      PMA_PORT: 3306            # enter the same port that you have your SQL running on
+      PMA_HOST: 192.168.86.32   # change the value here to your NAS IP LAN address
+    restart: unless-stopped
+    networks:
+      - net_private
+
+volumes:
+  vol_mysql:
+
+networks:
+  net_private:

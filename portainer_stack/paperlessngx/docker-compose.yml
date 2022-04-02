@@ -1,3 +1,4 @@
+version: '2'
 # docker-compose file for running paperless from the Docker Hub.
 # This file contains everything paperless needs to run.
 # Paperless supports amd64, arm and arm64 hardware.
@@ -15,20 +16,16 @@
 #
 # - Instead of SQLite (default), PostgreSQL is used as the database server.
 #
-# To install and update paperless with this file, do the following:
-#
-# - Open portainer Stacks list and click 'Add stack'
-# - Paste the contents of this file and assign a name, e.g. 'Paperless'
-# - Click 'Deploy the stack' and wait for it to be deployed
-# - Open the list of containers, select paperless_webserver_1
-# - Click 'Console' and then 'Connect' to open the command line inside the container
-# - Run 'python3 manage.py createsuperuser' to create a user
-# - Exit the console
-#
-# For more extensive installation and update instructions, refer to the
-# documentation.
-
-version: "2"
+# (1) Deploy stack:
+#   - Open Stacks list and click 'Add stack'
+#   - Paste the contents of this file and assign a name, e.g. 'mysql'
+#   - Click 'Deploy the stack' and wait for it to be deployed
+# (2) Create a superuser inside the container
+#   - Open the list of containers, select objPaperlessngx
+#   - Click 'Console' and then 'Connect' to open the command line inside the container
+#   - Run 'python3 manage.py createsuperuser' to create a user
+#   - Exit the console
+# (3) Expose Phpmyadmin on Synology LAN
 services:
   broker:
     image: redis:6.0
@@ -51,7 +48,8 @@ services:
       - net_private
 
   webserver:
-    image: jonaswinkler/paperless-ng:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: objPaperlessngx
     restart: unless-stopped
     depends_on:
       - db
@@ -90,7 +88,6 @@ services:
 # documents are written in.
       #PAPERLESS_OCR_LANGUAGE: eng
     networks:
-      - net_public
       - net_private
 
 volumes:
@@ -104,7 +101,6 @@ volumes:
   #   paperlessng_vol_data
 
 networks:
-  net_public:
   net_private:
   # Docker appends [FOLDER] name to named networks.
   #   paperlessng_net_public

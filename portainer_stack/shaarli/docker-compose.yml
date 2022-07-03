@@ -1,0 +1,37 @@
+version: '2'
+# (1) Deploy Portainer stack:
+#   - Open portainer Stacks list and click 'Add stack'
+#   - Paste the contents of this file and assign a name, e.g. 'mysql'
+#   - Click 'Deploy the stack' and wait for it to be deployed
+# (2) Networks are managed by Portainer
+#   - Portainer appends [STACK] name to named networks.
+#   - Portainer automatically creates a bridge to the host network.
+# (3) Volumes are managed by Portainer
+#   - /volume1/@docker/volumes/ on Synology
+#   - Portainer appends [STACK] name to named volumes, hence do not prefix [STACK] to named volumes, e.g. vol_cache.
+#   - Services should refer to named volumes with prefix [STACK], e.g. shaarli_vol_cache.
+# (4) Ports are host:container
+#   - Use high-number ports on host
+services:
+  shaarli:
+    image: shaarli/shaarli:latest
+    container_name: objShaarli
+    restart: unless-stopped
+    ports:
+      - 8100:80
+    volumes:
+      - shaarli_vol_cache:/var/www/shaarli/cache
+      - shaarli_vol_data:/var/www/shaarli/data
+    environment:
+      - PUID=1100
+      - PGID=1100
+      - TZ=Asia/Singapore
+    networks:
+      - net_private
+
+volumes:
+  vol_cache:
+  vol_data:
+
+networks:
+  net_private:

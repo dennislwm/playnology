@@ -1,0 +1,45 @@
+version: '2'
+# (1) Deploy Portainer stack:
+#   - Open portainer Stacks list and click 'Add stack'
+#   - Paste the contents of this file and assign a name, e.g. 'mysql'
+#   - Click 'Deploy the stack' and wait for it to be deployed
+# (2) Networks are managed by Portainer
+#   - Portainer appends [STACK] name to named networks.
+#   - Portainer automatically creates a bridge to the host network.
+# (3) Volumes are managed by Portainer
+#   - /volume1/@docker/volumes/ on Synology
+#   - Portainer appends [STACK] name to named volumes, hence do not prefix [STACK] to named volumes, e.g. vol_cache.
+#   - Services should refer to named volumes with prefix [STACK], e.g. shaarli_vol_cache.
+# (4) Ports are host:container
+#   - Use high-number ports on host
+# (5) Service codeserver
+#   - Set password in environment with `HASHED_PASSWORD` and `SUDO_PASSWORD_HASH`
+#     - Generate hashed password with `echo -n "thisismypassword" | npx argon2-cli -e`
+#   - For github integration, drop your ssh key in to /config/.ssh
+#     - Test `ssh -vT git@github.com`
+#   - Then open a terminal from the top menu and set your github username and email:
+#     - git config --global user.name "username"
+#     - git config --global user.email "email address"
+networks:
+  net_private:
+
+volumes:
+  # Services should refer to named volumes with prefix [STACK], e.g. shaarli_vol_cache.
+  vol_data:
+
+services:
+  codeserver:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: objCodeserver
+    environment:
+      - PUID=1200
+      - PGID=1200
+      - TZ=Asia/Singapore
+      - DEFAULT_WORKSPACE=/config/workspace
+    volumes:
+      - codeserver_vol_data:/config
+    ports:
+      - 8200:8443
+    restart: unless-stopped
+    networks:
+      - net_private    

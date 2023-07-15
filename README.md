@@ -1,22 +1,20 @@
 # playnology
 
-Ansible starter project for your Synology NAS.
+Starter project for your Synology NAS.
+
 <!-- TOC -->
 
 - [playnology](#playnology)
-- [Installing Ansible](#installing-ansible)
-- [Creating a basic inventory file](#creating-a-basic-inventory-file)
-- [Running your first Ad-Hoc Ansible command](#running-your-first-ad-hoc-ansible-command)
-- [Your first Ansible playbook](#your-first-ansible-playbook)
-- [Docker-compose Deployment with SSH](#docker-compose-deployment-with-ssh)
-- [Docker-compose Deployment with Portainer Stack](#docker-compose-deployment-with-portainer-stack)
-- [Docker-compose Deployment with Portainer Containers](#docker-compose-deployment-with-portainer-containers)
-- [Troubleshooting](#troubleshooting)
-  - [Using SSH connection type with passwords](#using-ssh-connection-type-with-passwords)
-  - [Too many authentication failure](#too-many-authentication-failure)
-  - [You are still asked by SSH to enter a password](#you-are-still-asked-by-ssh-to-enter-a-password)
-  - [Missing sudo password](#missing-sudo-password)
-- [Synology](#synology)
+- [Introduction](#introduction)
+  - [Purpose](#purpose)
+  - [Audience](#audience)
+  - [Terms and Acronyms](#terms-and-acronyms)
+- [System Overview](#system-overview)
+  - [Benefits and Values](#benefits-and-values)
+  - [Limitations](#limitations)
+- [User Personas](#user-personas)
+  - [RACI Matrix](#raci-matrix)
+- [Synology Requirements](#synology-requirements)
   - [Changing SSH Password](#changing-ssh-password)
     - [Enabling SSH](#enabling-ssh)
     - [Temporarily Enabling Telnet](#temporarily-enabling-telnet)
@@ -24,18 +22,295 @@ Ansible starter project for your Synology NAS.
   - [Installing Portainer](#installing-portainer)
   - [Adding Docker container](#adding-docker-container)
     - [Using Docker Compose](#using-docker-compose)
-    - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
-    - [Dangerous](#dangerous)
-    - [Using Portainer](#using-portainer)
+  - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
+  - [Dangerous](#dangerous)
+  - [Using Portainer](#using-portainer)
       - [Basic Container Settings](#basic-container-settings)
       - [Advanced Container Settings](#advanced-container-settings)
   - [NGINX Proxy Manager](#nginx-proxy-manager)
     - [Enabling Port Forwarding on Router](#enabling-port-forwarding-on-router)
+- [Installation and Configuration](#installation-and-configuration)
+  - [Installing Ansible](#installing-ansible)
+- [Execution](#execution)
+  - [Creating a basic inventory file](#creating-a-basic-inventory-file)
+  - [Running your first Ad-Hoc Ansible command](#running-your-first-ad-hoc-ansible-command)
+  - [Your first Ansible playbook](#your-first-ansible-playbook)
+  - [Docker-compose Deployment with SSH](#docker-compose-deployment-with-ssh)
+  - [Docker-compose Deployment with Portainer Stack](#docker-compose-deployment-with-portainer-stack)
+  - [Docker-compose Deployment with Portainer Containers](#docker-compose-deployment-with-portainer-containers)
+- [Logging](#logging)
+- [Monitoring](#monitoring)
+- [Updating](#updating)
+  - [Manually updating Disk Station Manager DSM](#manually-updating-disk-station-manager-dsm)
+  - [Manually installing additional RAM in Synology DS920+](#manually-installing-additional-ram-in-synology-ds920)
+- [Troubleshooting](#troubleshooting)
+  - [Using SSH connection type with passwords](#using-ssh-connection-type-with-passwords)
+  - [Too many authentication failure](#too-many-authentication-failure)
+  - [You are still asked by SSH to enter a password](#you-are-still-asked-by-ssh-to-enter-a-password)
+  - [Missing sudo password](#missing-sudo-password)
+  - [Error Start container zt failed](#error-start-container-zt-failed)
 - [References](#references)
 
 <!-- /TOC -->
 
-# Installing Ansible
+# 1. Introduction
+## 1.1. Purpose
+
+This document describes the Synology NAS automation and manual services that is provided for DevSecOps engineers.
+
+## 1.2. Audience
+
+The audience for this document includes:
+
+* DevSecOps Engineer who will install, configure and update the Synology NAS services to ensure continuous uptime and backup redundancy.
+
+## 1.3. Terms and Acronyms
+
+| Term |      Definition      |
+|:----:|:--------------------:|
+| DSM  | Disk Station Manager |
+
+# 2. System Overview
+## 2.1. Benefits and Values
+
+## 2.2. Limitations
+
+1. DSM 7.2 has stopped support for Docker.
+
+# 3. User Personas
+## 3.1 RACI Matrix
+
+|           Category           |                      Activity                       |
+|:----------------------------:|:---------------------------------------------------:|
+| Installation & Configuration |                 Installing Ansible                  |
+|           Updating           |                Manually updating DSM                |
+|          Execution           |           Creating a basic inventory file           |
+|          Execution           |      Running your first Ad-Hoc Ansible command      |
+|          Execution           |             Your first Ansible playbook             |
+|          Execution           |         Docker-compose Deployment with SSH          |
+|          Execution           |   Docker-compose Deployment with Portainer Stack    |
+|          Execution           | Docker-compose Deployment with Portainer Containers |
+
+
+# 4. Synology Requirements
+## 4.1. Changing SSH Password
+
+### Enabling SSH
+
+You can enable SSH service from the `Control Panel`. Go to `Terminal & SNMP` and check the box `Enable SSH service` and click `Apply`.
+
+After enabling SSH service, you will find out that you are unable to login with the admin password on the Synology web interface. We will need to temporarily enable Telnet service to fix this problem.
+
+### Temporarily Enabling Telnet
+
+Under the previous `Terminal & SNMP`, check the box `Enable Telnet service` and click `Apply`. You have to connect to both Telnet and SSH on the LAN because it doesn't work with Quickconnect.
+
+On your iPhone, download the app iTerminal. Open the app and create a Telnet connection specifying your `[PRIVATE_IP]` address on port `23`.
+
+Login using `admin` and same password as your Synology web interface. Type the following command to change the SSH password:
+
+```bash
+$ sudo synouser --setpw admin [PASSWORD]
+```
+
+If it doesn't work the first time, try again. After changing the password, you should be able to SSH to your Synology.
+
+Return to your Synology `Control Panel`, and disable the Telnet service.
+
+*Warning: Changing the `admin` password using Task Scheduler did not work.*
+
+## 4.2. Connecting via SSH
+
+Using the app iTerminal, create an SSH connection specifying your IP address on port 22. Login using admin and your password, and type EXACT:
+
+```bash
+$ sudo ln -s /var/run/docker.sock /volume1/docker/docker.sock
+```
+
+*Warning: Even after creating the symlink you cannot create the container from the Docker UI. This is because symlinks are not listed when trying to create a volume/file link.*
+
+## 4.3. Installing Portainer
+
+The Synology Docker UI is nice but lacks some functionality such as Stacks, Templates, etc. Portainer will run seamlessly along side the Synology Docker UI.
+
+First make a folder on your Synology Web Interface to hold the portainer data, using File Station, i.e. /`DBDock/docker/portainer`.
+
+However before we can install **Portainer**, we need to login via SSH as `admin` (password is same as your Synology Web Interface).
+
+```bash
+ssh admin:[PASSWORD]@[PRIVATE_IP]
+```
+
+Now run the following command to grab the Portainer image.
+
+```bash
+docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v /volume1/docker/portainer:/data portainer/portainer
+```
+
+*Warning: Do not change `volume1` as it is the EXACT name of DBDock.*
+
+Now check to see if it worked, you need to access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000. Create the admin user and password.
+
+Once logged in, select the **Local** environment and press the **Connect** button. You should be able to see a Dashboard of all your Docker files.
+
+## 4.4. Adding Docker container
+
+There are two methods to pull a new Docker image and add a running container:
+
+1. Using Docker Compose
+2. Using Portainer
+
+### Using Docker Compose
+
+First, login to your Synology via SSH as `admin` (password is same as your Synology Web Interface). Your `$HOME` directory should be `/var/services/homes/admin`.
+
+Create a folder to store your docker-compose files and navigate into it.
+
+```bash
+mkdir -p docker-compose/nginxpm
+cd docker-compose/nginxpm
+```
+
+Create a `docker-compose.yml` file and copy & paste the following code and save it.
+
+```
+version: "3"
+services:
+  app:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: always
+    ports:
+      # Public HTTP Port:
+      - '80:80'
+      # Public HTTPS Port:
+      - '443:443'
+      # Admin Web Port:
+      - '81:81'
+      # Default Administrator User
+      #   URL: http://localhost:81
+      #   Email: admin@example.com
+      #   Password: changeme
+    environment:
+      # These are the settings to access your db
+      DB_MYSQL_HOST: "db"
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: "npm"
+      DB_MYSQL_PASSWORD: "npm"
+      DB_MYSQL_NAME: "npm"
+      # If you would rather use Sqlite uncomment this
+      # and remove all DB_MYSQL_* lines above
+      # DB_SQLITE_FILE: "/data/database.sqlite"
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
+    volumes:
+      - vol_data:/data
+      - vol_letsencrypt:/etc/letsencrypt
+    depends_on:
+      - db
+    networks:
+      - net_public
+      - net_private
+  db:
+    image: 'jc21/mariadb-aria:latest'
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'npm'
+      MYSQL_DATABASE: 'npm'
+      MYSQL_USER: 'npm'
+      MYSQL_PASSWORD: 'npm'
+    volumes:
+      - vol_mysql:/var/lib/mysql
+    networks:
+      - net_private
+
+volumes:
+  vol_data:
+  vol_letsencrypt:
+  vol_mysql:
+  # Named volumes are stored in a part of the host filesystem
+  # which is managed by Docker (/volume1/@docker/volumes/ on Synology)
+  # Docker appends [FOLDER] name to named volumes.
+  #   nginxpm_vol_data
+  #   nginxpm_vol_letsencrypt
+  #   nginxpm_vol_mysql
+
+networks:
+  net_public:
+  net_private:
+  # Docker appends [FOLDER] name to named networks.
+  #   nginxpm_net_public
+  #   nginxpm_net_private
+```
+
+Run the `docker-compose` command within the same folder.
+
+```
+sudo docker-compose up -d
+```
+
+## 4.5. Prevent Synology Listening on Port 80/443
+
+Synology DSM is configured to run on both default ports 5000 and 5001. However, it's listening on ports 80 and 443 for redirection.
+
+In order to free ports 80 and 443, we will replace these ports with 82 and 444, respectively.
+
+```bash
+sudo sed -i -e 's/80/82/' -e 's/443/444/' /usr/syno/share/nginx/server.mustache /usr/syno/share/nginx/DSM.mustache /usr/syno/share/nginx/WWWService.mustache
+sudo synoservicecfg --restart nginx
+```
+
+## 4.6. Dangerous
+
+Alternatively, if we want to stop NGINX server we won't need to replace ports 80 and 443.
+
+Stop the NGINX server.
+
+```bash
+sudo synoservicecfg --disable nginx
+sudo synoservicecfg --hard-stop nginx
+```
+
+Restart both the NGINX and DSM servers.
+
+```bash
+sudo synoservicecfg --enable nginx
+sudo synoservicecfg --restart nginx
+sudo synoservice --enable DSM
+sudo synoservice --restart DSM
+```
+
+*Warning: Synology DSM depends on NGINX server.*
+
+## 4.7. Using Portainer
+
+Access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000, and login as `admin`.
+
+#### Basic Container Settings
+
+Click on the side menu `Containers`, then click on `+ Add Container`.
+
+Enter both the container and image names. For example, `objTeedy` and `jdreinhardt/teedy:latest`.
+
+Click on `+ publish a new network port` and enter host port `8080` and container port `8080`. Ensure `TCP` is selected.
+
+#### Advanced Container Settings
+
+Click on `Volumes` and then `+ map additional volume` button.
+
+Map container path `/data` to host volume `teedy_vol_data`.
+
+Click on `Network` and then select `nginxpm_net_public`.
+
+Click on `Deploy the container`.
+
+## 4.8. NGINX Proxy Manager
+
+### Enabling Port Forwarding on Router
+
+You may need to enable port forwarding on both your Google Home WiFi and router.
+
+# 5. Installation and Configuration
+## 5.1. Installing Ansible
 
 **Ansible**'s only real dependency is Python. Once Python is installed, the simplest way to get Ansible running is to use `pip`.
 
@@ -44,10 +319,12 @@ pip install ansible
 ```
 
 > You must enable SSH remote connection on your Synology NAS before running Ansible commands. You can follow the steps in this article:
-> 
+>
 > [Configure the SSH server on your Synology NAS](https://flatpacklinux.com/2020/01/07/configure-the-ssh-server-on-your-synology-nas)
 
-# Creating a basic inventory file
+---
+# 6. Execution
+## 6.1. Creating a basic inventory file
 
 Ansible uses an inventory file (basically, a list of servers) to communicate with your servers. Create a file `hosts` in your project root folder and add one server to it:
 
@@ -58,7 +335,8 @@ Ansible uses an inventory file (basically, a list of servers) to communicate wit
 
 The `wifi` is an arbitrary name for the group of servers you're managing, followed by the IP addresses of your servers, one per line. If you're not using port 22 for SSH, you will need to append it to the address.
 
-# Running your first Ad-Hoc Ansible command
+---
+## 6.2. Running your first Ad-Hoc Ansible command
 
 Now that you've installed Ansible and created an inventory file, it's time to run a command:
 
@@ -91,7 +369,8 @@ The previous command would now be:
 ansible <group> -i ./hosts -m ping
 ```
 
-# Your first Ansible playbook
+---
+## 6.3. Your first Ansible playbook
 
 Create a folder `plays/` and add a file `check-linux-system-playbook.yml` in that folder. Copy and paste the following code:
 
@@ -110,7 +389,8 @@ Now that you've created your first Ansible playbook, it is time to run it.
 ansible-playbook -i ./hosts plays/check-linux-system-playbook.yml
 ```
 
-# Docker-compose Deployment with SSH
+---
+## 6.4. Docker-compose Deployment with SSH
 
 1. Open a local terminal and remote SSH to your Synology NAS.
 
@@ -132,14 +412,14 @@ sudo docker-compose.yml
 cat /etc/passwd | grep 1000
 ```
 
-5. Create a paperless admin user. 
+5. Create a paperless admin user.
 
 ```sh
 docker exec -it paperlessng_webserver_1 python3 /usr/src/paperless/src/manage.py createsuperuser --username=admin --
 ```
 
 ---
-# Docker-compose Deployment with Portainer Stack
+## 6.5. Docker-compose Deployment with Portainer Stack
 
 1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
 
@@ -250,7 +530,7 @@ volumes:
   vol_postgres:
   vol_data:
   vol_media:
-  # Named volumes are stored in a part of the host filesystem 
+  # Named volumes are stored in a part of the host filesystem
   # which is managed by Docker (/volume1/@docker/volumes/ on Synology)
   # Docker appends [FOLDER] name to named volumes.
   #   paperlessng_vol_data
@@ -276,7 +556,7 @@ This command will create a superuser `admin`. Enter your email and password when
 5. Navigate to the **Container status**, and click on **Logs**. Check if there are any errors in the log.
 
 ---
-# Docker-compose Deployment with Portainer Containers
+## 6.6. Docker-compose Deployment with Portainer Containers
 
 1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
 
@@ -344,10 +624,45 @@ Navigate to **Env**, and click on **+ add environment variable**.
 
 Navigate to **Restart policy**, and select **Unless stopped**.
 
----
-# Troubleshooting
+# 7. Logging
 
-## Using SSH connection type with passwords
+# 8. Monitoring
+
+# 9. Updating
+## 9.1. Manually updating Disk Station Manager (DSM)
+
+This runbook should be performed by the DevSecOps Engineer.
+
+1. Navigate to your Synology NAS Console > Control Panel > Update & Restore
+
+2. Click on **Download** to download the latest DSM.
+
+3. After download has completed successfully, click on **Update Now**.
+
+4. The update may restart the device including all services and packages once the update is complete.
+
+## 9.2. Manually installing additional RAM in Synology DS920+
+
+This runbook should be performed by the DevSecOps Engineer.
+
+1. Before installing the RAM, perform any updates to the DSM first.
+
+| The RAM used is the official Synology Memory Module, D4NESO-2666-4G, DDR4-2666 260pin, Non-ECC Unbuffered SO-DIMM 4GB RAM.
+
+2. Check your existing memory size before shutting down your Synology NAS.
+
+3. Remove all the HDD trays from your NAS while taking note of the order.
+
+4. Earth yourself by touching a heavy metal object first.
+
+5. Insert the additional RAM on the right inner wall of the NAS until you hear a click sound.
+
+6. Insert all the HDD trays in the same order as before.
+
+7. Start your Synology NAS and check your new memory size.
+
+# 10. Troubleshooting
+## 10.1 Using SSH connection type with passwords
 
 If you get this error when using option ` -k` to ask for connection password, you must install the sshpass program.
 
@@ -358,7 +673,7 @@ If you get this error when using option ` -k` to ask for connection password, yo
 ```
 
 > There are instructions on how to install **sshpass** here:
-> 
+>
 > https://gist.github.com/arunoda/7790979
 
 For macOS, you will need to install **Xcode** and command line tools then use the unofficial Homebrew command:
@@ -367,7 +682,7 @@ For macOS, you will need to install **Xcode** and command line tools then use th
 brew install hudochenkov/sshpass/sshpass
 ```
 
-## Too many authentication failure
+## 10.2. Too many authentication failure
 
 If you get the following SSH Error:
 
@@ -383,7 +698,8 @@ So if you have a number of private keys in your .ssh directory you could disable
 ssh -o PubkeyAuthentication=no <user>@<serverip>
 ```
 
-## You are still asked by SSH to enter a password
+---
+## 10.3. You are still asked by SSH to enter a password
 
 SSH to your server and change the following permissions:
 
@@ -393,7 +709,8 @@ chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-## Missing sudo password 
+---
+## 10.4. Missing sudo password
 
 If you get the following error:
 
@@ -403,7 +720,7 @@ fatal: [192.168.86.32]: FAILED! => {"msg": "Missing sudo password"}
 
 Connect to your Synology NAS via SSH and then become a superuser `sudo su -`. Enter your `root` password which should be the same as your `admin` password.
 
-Create a file `/etc/sudoers.d/admin` and add the following line: 
+Create a file `/etc/sudoers.d/admin` and add the following line:
 
 ```
 admin ALL=(ALL) NOPASSWD:ALL
@@ -411,226 +728,50 @@ admin ALL=(ALL) NOPASSWD:ALL
 
 You have enabled superuser for your Ansible commands.
 
-# Synology
+---
+## 10.5. Error Start container zt failed
 
-## Changing SSH Password
+If you get the following error log in your Synology Docker:
 
-### Enabling SSH
-
-You can enable SSH service from the `Control Panel`. Go to `Terminal & SNMP` and check the box `Enable SSH service` and click `Apply`.
-
-After enabling SSH service, you will find out that you are unable to login with the admin password on the Synology web interface. We will need to temporarily enable Telnet service to fix this problem.
-
-### Temporarily Enabling Telnet
-
-Under the previous `Terminal & SNMP`, check the box `Enable Telnet service` and click `Apply`. You have to connect to both Telnet and SSH on the LAN because it doesn't work with Quickconnect.
-
-On your iPhone, download the app iTerminal. Open the app and create a Telnet connection specifying your `[PRIVATE_IP]` address on port `23`.
-
-Login using `admin` and same password as your Synology web interface. Type the following command to change the SSH password:
-
-```bash
-$ sudo synouser --setpw admin [PASSWORD]
+```json
+{"message":"error gathering device information while adding custom device \"/dev/net/tun\": no such file or directory"}
 ```
 
-If it doesn't work the first time, try again. After changing the password, you should be able to SSH to your Synology.
+1. Create a file `/tun.sh` and type the following code:
 
-Return to your Synology `Control Panel`, and disable the Telnet service. 
+```sh
+#!/bin/sh
 
-*Warning: Changing the `admin` password using Task Scheduler did not work.*
+# Create the necessary file structure for /dev/net/tun
+if ( [ ! -c /dev/net/tun ] ); then
+  if ( [ ! -d /dev/net ] ); then
+    mkdir -m 755 /dev/net
+  fi
+  mknod /dev/net/tun c 10 200
+  chmod 0755 /dev/net/tun
+fi
 
-## Connecting via SSH
-
-Using the app iTerminal, create an SSH connection specifying your IP address on port 22. Login using admin and your password, and type EXACT:
-
-```bash
-$ sudo ln -s /var/run/docker.sock /volume1/docker/docker.sock
+# Load the tun module if not already loaded
+if ( !(lsmod | grep -q "^tun\s") ); then
+  insmod /lib/modules/tun.ko
+fi
 ```
 
-*Warning: Even after creating the symlink you cannot create the container from the Docker UI. This is because symlinks are not listed when trying to create a volume/file link.*
+2. Make the script executable with `chmod a+x /tun.sh`.
 
-## Installing Portainer
-
-The Synology Docker UI is nice but lacks some functionality such as Stacks, Templates, etc. Portainer will run seamlessly along side the Synology Docker UI.
-
-First make a folder on your Synology Web Interface to hold the portainer data, using File Station, i.e. /`DBDock/docker/portainer`.
-
-However before we can install **Portainer**, we need to login via SSH as `admin` (password is same as your Synology Web Interface).
-
-```bash
-ssh admin:[PASSWORD]@[PRIVATE_IP]
-```
-
-Now run the following command to grab the Portainer image.
-
-```bash
-docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v /volume1/docker/portainer:/data portainer/portainer
-```
-
-*Warning: Do not change `volume1` as it is the EXACT name of DBDock.*
-
-Now check to see if it worked, you need to access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000. Create the admin user and password.
-
-Once logged in, select the **Local** environment and press the **Connect** button. You should be able to see a Dashboard of all your Docker files.
-
-## Adding Docker container
-
-There are two methods to pull a new Docker image and add a running container:
-
-1. Using Docker Compose
-2. Using Portainer
-
-### Using Docker Compose
-
-First, login to your Synology via SSH as `admin` (password is same as your Synology Web Interface). Your `$HOME` directory should be `/var/services/homes/admin`.
-
-Create a folder to store your docker-compose files and navigate into it.
-
-```bash
-mkdir -p docker-compose/nginxpm
-cd docker-compose/nginxpm
-```
-
-Create a `docker-compose.yml` file and copy & paste the following code and save it.
-
-```
-version: "3"
-services:
-  app:
-    image: 'jc21/nginx-proxy-manager:latest'
-    restart: always
-    ports:
-      # Public HTTP Port:
-      - '80:80'
-      # Public HTTPS Port:
-      - '443:443'
-      # Admin Web Port:
-      - '81:81'
-      # Default Administrator User
-      #   URL: http://localhost:81
-      #   Email: admin@example.com
-      #   Password: changeme
-    environment:
-      # These are the settings to access your db
-      DB_MYSQL_HOST: "db"
-      DB_MYSQL_PORT: 3306
-      DB_MYSQL_USER: "npm"
-      DB_MYSQL_PASSWORD: "npm"
-      DB_MYSQL_NAME: "npm"
-      # If you would rather use Sqlite uncomment this
-      # and remove all DB_MYSQL_* lines above
-      # DB_SQLITE_FILE: "/data/database.sqlite"
-      # Uncomment this if IPv6 is not enabled on your host
-      # DISABLE_IPV6: 'true'
-    volumes:
-      - vol_data:/data
-      - vol_letsencrypt:/etc/letsencrypt
-    depends_on:
-      - db
-    networks:
-      - net_public
-      - net_private
-  db:
-    image: 'jc21/mariadb-aria:latest'
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: 'npm'
-      MYSQL_DATABASE: 'npm'
-      MYSQL_USER: 'npm'
-      MYSQL_PASSWORD: 'npm'
-    volumes:
-      - vol_mysql:/var/lib/mysql
-    networks:
-      - net_private
-
-volumes: 
-  vol_data:
-  vol_letsencrypt:
-  vol_mysql:
-  # Named volumes are stored in a part of the host filesystem 
-  # which is managed by Docker (/volume1/@docker/volumes/ on Synology)
-  # Docker appends [FOLDER] name to named volumes.
-  #   nginxpm_vol_data
-  #   nginxpm_vol_letsencrypt
-  #   nginxpm_vol_mysql
-
-networks:
-  net_public:
-  net_private:
-  # Docker appends [FOLDER] name to named networks.
-  #   nginxpm_net_public
-  #   nginxpm_net_private
-```
-
-Run the `docker-compose` command within the same folder.
-
-```
-sudo docker-compose up -d
-```
-
-### Prevent Synology Listening on Port 80/443
-
-Synology Disk Station Manager ["DSM"] is configured to run on both default ports 5000 and 5001. However, it's listening on ports 80 and 443 for redirection.
-
-In order to free ports 80 and 443, we will replace these ports with 82 and 444, respectively. 
-
-```bash
-sudo sed -i -e 's/80/82/' -e 's/443/444/' /usr/syno/share/nginx/server.mustache /usr/syno/share/nginx/DSM.mustache /usr/syno/share/nginx/WWWService.mustache
-sudo synoservicecfg --restart nginx
-```
-
-### Dangerous
-
-Alternatively, if we want to stop NGINX server we won't need to replace ports 80 and 443.
-
-Stop the NGINX server.
-
-```bash
-sudo synoservicecfg --disable nginx
-sudo synoservicecfg --hard-stop nginx
-```
-
-Restart both the NGINX and DSM servers.
-
-```bash
-sudo synoservicecfg --enable nginx
-sudo synoservicecfg --restart nginx
-sudo synoservice --enable DSM
-sudo synoservice --restart DSM
-```
-
-*Warning: Synology DSM depends on NGINX server.*
-
-### Using Portainer
-
-Access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000, and login as `admin`.
-
-#### Basic Container Settings
-
-Click on the side menu `Containers`, then click on `+ Add Container`.
-
-Enter both the container and image names. For example, `objTeedy` and `jdreinhardt/teedy:latest`.
-
-Click on `+ publish a new network port` and enter host port `8080` and container port `8080`. Ensure `TCP` is selected.
-
-#### Advanced Container Settings
-
-Click on `Volumes` and then `+ map additional volume` button.
-
-Map container path `/data` to host volume `teedy_vol_data`.
-
-Click on `Network` and then select `nginxpm_net_public`. 
-
-Click on `Deploy the container`.
-
-## NGINX Proxy Manager
-
-### Enabling Port Forwarding on Router
-
-You may need to enable port forwarding on both your Google Home WiFi and router.
+3. Make the script run on every restart.
+  - Navigate to **Synology Control Panel > Task Scheduler**.
+  - Click **Create > Triggered Task > User-defined script**.
+  - Click on **General** tab.
+    - For **User** select `admin`.
+    - For **Event** select `Boot-up`.
+    - Click on **Enabled** task.
+  - Click on **Task Settings** tab.
+    - For **Run command > User-defined script**, type `bash /tun.sh`
+  - Click **OK**.
 
 ---
-# References
+# 11. References
 The following resources were used as a single-use reference.
 
 | Title | Author | Publisher Date [Short Code]
@@ -644,3 +785,6 @@ The following resources were used as a single-use reference.
 | [Prevent DSM Listening on Port 80/443](https://www.reddit.com/r/synology/comments/ahs3xh/prevent_dsm_listening_on_port_80443)
 | [DSM broken after latest Update](https://community.synology.com/enu/forum/17/post/96886)
 | [Prevent DSM Listening on Port 80/443](https://www.reddit.com/r/synology/comments/ahs3xh/prevent_dsm_listening_on_port_80443/)
+| [Synology NAS | ZeroTier Documentation](https://docs.zerotier.com/devices/synology/)
+| [Solved - --device /dev/net/tun not working anymore after Docker update 18.09.0-0513](https://www.synoforum.com/threads/device-dev-net-tun-not-working-anymore-after-docker-update-18-09-0-0513.3074/)
+| [Fix TUN/TAP not available on a Synology NAS](https://memoryleak.dev/post/fix-tun-tap-not-available-on-a-synology-nas/)

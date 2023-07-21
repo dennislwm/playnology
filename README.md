@@ -12,25 +12,28 @@ Starter project for your Synology NAS.
 - [System Overview](#system-overview)
   - [Benefits and Values](#benefits-and-values)
   - [Limitations](#limitations)
-- [User Personas](#user-personas)
   - [RACI Matrix](#raci-matrix)
-- [Synology Requirements](#synology-requirements)
-  - [Changing SSH Password](#changing-ssh-password)
-    - [Enabling SSH](#enabling-ssh)
-    - [Temporarily Enabling Telnet](#temporarily-enabling-telnet)
-  - [Connecting via SSH](#connecting-via-ssh)
-  - [Installing Portainer](#installing-portainer)
-  - [Adding Docker container](#adding-docker-container)
-    - [Using Docker Compose](#using-docker-compose)
-  - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
-  - [Dangerous](#dangerous)
-  - [Using Portainer](#using-portainer)
+- [Requirements](#requirements)
+  - [Synology](#synology)
+    - [Changing SSH Password](#changing-ssh-password)
+      - [Enabling SSH](#enabling-ssh)
+      - [Temporarily Enabling Telnet](#temporarily-enabling-telnet)
+    - [Connecting via SSH](#connecting-via-ssh)
+    - [Installing Portainer](#installing-portainer)
+    - [Adding Docker container](#adding-docker-container)
+      - [Using Docker Compose](#using-docker-compose)
+    - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
+    - [Dangerous](#dangerous)
+    - [Using Portainer](#using-portainer)
       - [Basic Container Settings](#basic-container-settings)
       - [Advanced Container Settings](#advanced-container-settings)
-  - [NGINX Proxy Manager](#nginx-proxy-manager)
-    - [Enabling Port Forwarding on Router](#enabling-port-forwarding-on-router)
+    - [NGINX Proxy Manager](#nginx-proxy-manager)
+      - [Enabling Port Forwarding on Router](#enabling-port-forwarding-on-router)
+  - [ZeroTier One](#zerotier-one)
+    - [iPhone](#iphone)
 - [Installation and Configuration](#installation-and-configuration)
   - [Installing Ansible](#installing-ansible)
+  - [Install and configure ZeroTier One on iPhone](#install-and-configure-zerotier-one-on-iphone)
 - [Execution](#execution)
   - [Creating a basic inventory file](#creating-a-basic-inventory-file)
   - [Running your first Ad-Hoc Ansible command](#running-your-first-ad-hoc-ansible-command)
@@ -38,6 +41,7 @@ Starter project for your Synology NAS.
   - [Docker-compose Deployment with SSH](#docker-compose-deployment-with-ssh)
   - [Docker-compose Deployment with Portainer Stack](#docker-compose-deployment-with-portainer-stack)
   - [Docker-compose Deployment with Portainer Containers](#docker-compose-deployment-with-portainer-containers)
+  - [Access and bookmark container apps from NAS on iPhone](#access-and-bookmark-container-apps-from-nas-on-iphone)
 - [Logging](#logging)
 - [Monitoring](#monitoring)
 - [Updating](#updating)
@@ -53,6 +57,7 @@ Starter project for your Synology NAS.
 
 <!-- /TOC -->
 
+---
 # 1. Introduction
 ## 1.1. Purpose
 
@@ -62,6 +67,8 @@ This document describes the Synology NAS automation and manual services that is 
 
 The audience for this document includes:
 
+* Mobile User who will install, configure and enable **ZeroTier One** app on their iPhone to access the container applications hosted on Synology NAS.
+
 * DevSecOps Engineer who will install, configure and update the Synology NAS services to ensure continuous uptime and backup redundancy.
 
 ## 1.3. Terms and Acronyms
@@ -70,6 +77,7 @@ The audience for this document includes:
 |:----:|:--------------------:|
 | DSM  | Disk Station Manager |
 
+---
 # 2. System Overview
 ## 2.1. Benefits and Values
 
@@ -77,31 +85,36 @@ The audience for this document includes:
 
 1. DSM 7.2 has stopped support for Docker.
 
-# 3. User Personas
+---
+ 3. User Personas
 ## 3.1 RACI Matrix
 
-|           Category           |                      Activity                       |
-|:----------------------------:|:---------------------------------------------------:|
-| Installation & Configuration |                 Installing Ansible                  |
-|           Updating           |                Manually updating DSM                |
-|          Execution           |           Creating a basic inventory file           |
-|          Execution           |      Running your first Ad-Hoc Ansible command      |
-|          Execution           |             Your first Ansible playbook             |
-|          Execution           |         Docker-compose Deployment with SSH          |
-|          Execution           |   Docker-compose Deployment with Portainer Stack    |
-|          Execution           | Docker-compose Deployment with Portainer Containers |
+|           Category           |                       Activity                        | Mobile User | DSO Engineer |
+|:----------------------------:|:-----------------------------------------------------:|:-----------:|:------------:|
+| Installation & Configuration |                  Installing Ansible                   |             |     R,A      |
+|          Execution           |            Creating a basic inventory file            |             |     R,A      |
+|          Execution           |       Running your first Ad-Hoc Ansible command       |             |     R,A      |
+|          Execution           |              Your first Ansible playbook              |             |     R,A      |
+|          Execution           |          Docker-compose Deployment with SSH           |             |     R,A      |
+|          Execution           |    Docker-compose Deployment with Portainer Stack     |             |     R,A      |
+|          Execution           |  Docker-compose Deployment with Portainer Containers  |             |     R,A      |
+|           Updating           |                 Manually updating DSM                 |             |     R,A      |
+| Installation & Configuration |     Install and configure ZeroTier One on iPhone      |     R,A     |      C       |
+|          Execution           | Access and bookmark container apps from NAS on iPhone |     R,A     |              |
+|       Troubleshooting        |            Error Start container zt failed            |      I      |     R,A      |
 
+---
+# 4. Requirements
+## 4.1. Synology
+### 4.1.1. Changing SSH Password
 
-# 4. Synology Requirements
-## 4.1. Changing SSH Password
-
-### Enabling SSH
+#### Enabling SSH
 
 You can enable SSH service from the `Control Panel`. Go to `Terminal & SNMP` and check the box `Enable SSH service` and click `Apply`.
 
 After enabling SSH service, you will find out that you are unable to login with the admin password on the Synology web interface. We will need to temporarily enable Telnet service to fix this problem.
 
-### Temporarily Enabling Telnet
+#### Temporarily Enabling Telnet
 
 Under the previous `Terminal & SNMP`, check the box `Enable Telnet service` and click `Apply`. You have to connect to both Telnet and SSH on the LAN because it doesn't work with Quickconnect.
 
@@ -119,7 +132,7 @@ Return to your Synology `Control Panel`, and disable the Telnet service.
 
 *Warning: Changing the `admin` password using Task Scheduler did not work.*
 
-## 4.2. Connecting via SSH
+### 4.1.2. Connecting via SSH
 
 Using the app iTerminal, create an SSH connection specifying your IP address on port 22. Login using admin and your password, and type EXACT:
 
@@ -129,7 +142,7 @@ $ sudo ln -s /var/run/docker.sock /volume1/docker/docker.sock
 
 *Warning: Even after creating the symlink you cannot create the container from the Docker UI. This is because symlinks are not listed when trying to create a volume/file link.*
 
-## 4.3. Installing Portainer
+### 4.1.3. Installing Portainer
 
 The Synology Docker UI is nice but lacks some functionality such as Stacks, Templates, etc. Portainer will run seamlessly along side the Synology Docker UI.
 
@@ -153,14 +166,14 @@ Now check to see if it worked, you need to access the Portainer container from y
 
 Once logged in, select the **Local** environment and press the **Connect** button. You should be able to see a Dashboard of all your Docker files.
 
-## 4.4. Adding Docker container
+### 4.1.4. Adding Docker container
 
 There are two methods to pull a new Docker image and add a running container:
 
 1. Using Docker Compose
 2. Using Portainer
 
-### Using Docker Compose
+#### Using Docker Compose
 
 First, login to your Synology via SSH as `admin` (password is same as your Synology Web Interface). Your `$HOME` directory should be `/var/services/homes/admin`.
 
@@ -248,7 +261,7 @@ Run the `docker-compose` command within the same folder.
 sudo docker-compose up -d
 ```
 
-## 4.5. Prevent Synology Listening on Port 80/443
+### 4.1.5. Prevent Synology Listening on Port 80/443
 
 Synology DSM is configured to run on both default ports 5000 and 5001. However, it's listening on ports 80 and 443 for redirection.
 
@@ -259,7 +272,7 @@ sudo sed -i -e 's/80/82/' -e 's/443/444/' /usr/syno/share/nginx/server.mustache 
 sudo synoservicecfg --restart nginx
 ```
 
-## 4.6. Dangerous
+### 4.1.6. Dangerous
 
 Alternatively, if we want to stop NGINX server we won't need to replace ports 80 and 443.
 
@@ -281,7 +294,7 @@ sudo synoservice --restart DSM
 
 *Warning: Synology DSM depends on NGINX server.*
 
-## 4.7. Using Portainer
+### 4.1.7. Using Portainer
 
 Access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000, and login as `admin`.
 
@@ -303,12 +316,20 @@ Click on `Network` and then select `nginxpm_net_public`.
 
 Click on `Deploy the container`.
 
-## 4.8. NGINX Proxy Manager
+### 4.1.8. NGINX Proxy Manager
 
-### Enabling Port Forwarding on Router
+#### Enabling Port Forwarding on Router
 
 You may need to enable port forwarding on both your Google Home WiFi and router.
 
+---
+## 4.2. ZeroTier One
+
+### iPhone
+
+[Download on the App Store](https://www.zerotier.com/download/)
+
+---
 # 5. Installation and Configuration
 ## 5.1. Installing Ansible
 
@@ -321,6 +342,22 @@ pip install ansible
 > You must enable SSH remote connection on your Synology NAS before running Ansible commands. You can follow the steps in this article:
 >
 > [Configure the SSH server on your Synology NAS](https://flatpacklinux.com/2020/01/07/configure-the-ssh-server-on-your-synology-nas)
+
+---
+## 5.2. Install and configure ZeroTier One on iPhone
+
+This runbook should be performed by the Mobile User.
+
+1. Download and install the **ZeroTier One** app.
+
+2. Open the app and click `+`.
+
+3. Enter the **Network ID** from your ZeroTier account.
+  - Enable Default Route.
+  - Enable On Demand (beta).
+
+4. Click on **Add Network**.
+  - Check that the Status is `OK`.
 
 ---
 # 6. Execution
@@ -624,10 +661,27 @@ Navigate to **Env**, and click on **+ add environment variable**.
 
 Navigate to **Restart policy**, and select **Unless stopped**.
 
+---
+## 6.7. Access and bookmark container apps from NAS on iPhone
+
+This runbook should be performed by the Mobile User.
+
+1. On your iPhone, open a browser and type the URL as follows:
+  - `ZEROTIER_MANAGED_IP:NAS_PORT`, e.g. `172.29.xxx.xxx:8100`
+
+| Note: Accessing the container app requires both **ZeroTier One** running on your iPhone and NAS.
+
+2. You should see the home page of your container app.
+
+3. Bookmark the page on your browser.
+
+---
 # 7. Logging
 
+---
 # 8. Monitoring
 
+---
 # 9. Updating
 ## 9.1. Manually updating Disk Station Manager (DSM)
 
@@ -661,6 +715,7 @@ This runbook should be performed by the DevSecOps Engineer.
 
 7. Start your Synology NAS and check your new memory size.
 
+---
 # 10. Troubleshooting
 ## 10.1 Using SSH connection type with passwords
 
@@ -731,6 +786,8 @@ You have enabled superuser for your Ansible commands.
 ---
 ## 10.5. Error Start container zt failed
 
+> Note: Synology DSM 6 `root` account has been hardened. You can no longer SSH using `root`, however you can still `sudo -i` after logging in as any member account of the administrators group.
+
 If you get the following error log in your Synology Docker:
 
 ```json
@@ -767,8 +824,21 @@ fi
     - For **Event** select `Boot-up`.
     - Click on **Enabled** task.
   - Click on **Task Settings** tab.
-    - For **Run command > User-defined script**, type `bash /tun.sh`
+    - For **Run command > User-defined script**, type:
+      ```
+      sudo bash /tun.sh
+      echo $?
+      ```
   - Click **OK**.
+
+4. After restarting the `zt` container, check the node status:
+  ```
+  sudo docker exec -it zt zerotier-cli status
+  ```
+  If successful, you should see the following:
+  ```
+  200 info xxxxxx9857 1.8.10 ONLINE
+  ```
 
 ---
 # 11. References

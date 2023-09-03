@@ -12,6 +12,7 @@ Starter project for your Synology NAS.
 - [System Overview](#system-overview)
   - [Benefits and Values](#benefits-and-values)
   - [Limitations](#limitations)
+- [User Personas](#user-personas)
   - [RACI Matrix](#raci-matrix)
 - [Requirements](#requirements)
   - [Synology](#synology)
@@ -33,6 +34,8 @@ Starter project for your Synology NAS.
     - [iPhone](#iphone)
 - [Installation and Configuration](#installation-and-configuration)
   - [Installing Ansible](#installing-ansible)
+  - [Setting up LDAP on your Synology NAS](#setting-up-ldap-on-your-synology-nas)
+  - [Setting up configuration.yml for Authelia stack](#setting-up-configurationyml-for-authelia-stack)
   - [Install and configure ZeroTier One on iPhone](#install-and-configure-zerotier-one-on-iphone)
 - [Execution](#execution)
   - [Creating a basic inventory file](#creating-a-basic-inventory-file)
@@ -86,12 +89,14 @@ The audience for this document includes:
 1. DSM 7.2 has stopped support for Docker.
 
 ---
- 3. User Personas
+# 3. User Personas
 ## 3.1 RACI Matrix
 
 |           Category           |                       Activity                        | Mobile User | DSO Engineer |
 |:----------------------------:|:-----------------------------------------------------:|:-----------:|:------------:|
 | Installation & Configuration |                  Installing Ansible                   |             |     R,A      |
+| Installation & Configuration |         Setting up LDAP on your Synology NAS          |             |     R,A      |
+| Installation & Configuration |   Setting up `configuration.yml` for Authelia stack   |             |     R,A      |
 |          Execution           |            Creating a basic inventory file            |             |     R,A      |
 |          Execution           |       Running your first Ad-Hoc Ansible command       |             |     R,A      |
 |          Execution           |              Your first Ansible playbook              |             |     R,A      |
@@ -343,8 +348,158 @@ pip install ansible
 >
 > [Configure the SSH server on your Synology NAS](https://flatpacklinux.com/2020/01/07/configure-the-ssh-server-on-your-synology-nas)
 
----
-## 5.2. Install and configure ZeroTier One on iPhone
+## 5.2. Setting up LDAP on your Synology NAS
+
+This runbook should be performed by the DevSecOps.
+
+The benefit of running LDAP on your server is single sign-on (SSO). For services that do not have any login, your LDAP service will protect those services, while for services that have their own login feature, your LDAP service will provide one login for all of them.
+
+1. Navigate to your Synology NAS Console > Package Center.
+
+2. Find and install **LDAP Server**.
+
+3. Open LDAP Server > Settings > click **Enable LDAP server** checkbox to enable it.
+
+4. Enter the following details:
+  - For FQDN, enter your LDAP server name, e.g. `dbdock.watertown`.
+  - For Password, enter your LDAP password, this is NOT the same as your DSM account.
+
+5. Click **Apply**.
+
+6. Under Authentication Information, you should see that your **Base DN** and **Bind DN** are now configured.
+
+## 5.3. Setting up `configuration.yml` for Authelia stack
+
+This runbook should be performed by the DevSecOps.
+
+Before we can fire up an Authelia stack on Portainer, we need to have its `configuration.yml` file ready and configured towards your Synology NAS environment.
+
+1. Choose a custom location on your Synology NAS where your Authelia config file will be stored, we can store it under the Synology Docker root folder `/volume1/docker`.
+
+2. Copy the [`config.template.yml`](https://github.com/authelia/authelia/blob/master/config.template.yml) file to your custom location, e.g. `/volume1/docker/authelia/configuration.yml`.
+
+3. Edit the `configuration.yml` to your Synology NAS environment:
+  - For **`jwt_secret`**: set the environment variable `AUTHELIA_JWT_SECRET_FILE` to `/secrets/JWT_SECRET` file with a long random value.
+  - For **`totp.issuer`**: enter your FQDN, e.g. `dbdock.watertown`.
+  - Under **`authentication_backend.ldap`**,
+    - For **`url`**: enter your NAS IP e.g. `ldap://192.xx.xx.xx`.
+    - For **`base_dn`**: enter your LDAP **Base DN** configuration.
+    - For **`user`**: enter your LDAP **Bind DN** configuration.
+    - For **`password`**: set the environment variable `AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD_FILE` to `/secrets/AUTHENTICATION_BACKEND_LDAP_PASSWORD` file with your LDAP admin password.
+    - For **`users_filter`**: enter `(&({username_attribute}={input})(objectClass=person))`.
+  - Under **`access_control.rules[*]`**,
+    - For **`domain`**: enter your domain wildcard, e.g. `*.dbdock.watertown`.
+    - For **`subject`**: enter which users to apply rules to, e.g. `user:root`.
+  - Under **`session`,
+    - For **`domain`**, enter your FQDN, e.g. `dbdock.watertown`.
+    - For **`secret`**, set the environment variable `AUTHELIA_SESSION_SECRET_FILE` to `/secrets/SESSION_SECRET` file with a long random value.
+    - For **`redis.host`**, enter your NAS IP e.g. `192.xx.xx.xx`.
+    - For **`redis.database_index`**, enter an index for your Redis database, e.g. use any integer [0..], where default is 0.
+  - Under **`storage.mysql`**,
+    - For **`encryption_key`**: set the environment variable `AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE` to `/secrets/STORAGE_ENCRYPTION_KEY` file with a long random value of at least 20 chars.
+    - For **`host`**, enter your NAS IP e.g. `192.xx.xx.xx`.
+    - For **`port`**, enter `3306`.
+    - For **`database`**, enter your custom database name that you have created, e.g. `authelia`.
+    - For **`username`**, enter your custom database user that you have created, e.g. `authelia`.
+    - For **`password`**, set the environment variable `AUTHELIA_STORAGE_MYSQL_PASSWORD_FILE` to `/secrets/STORAGE_MYSQL_PASSWORD` file with your custom database password that you have configured.
+  - Under **`notifier.smtp`**,
+    - For **`host`**, enter `smtp.gmail.com`.
+    - For **`port`**, enter `587`
+    - For **`username`**, enter your Gmail user that you have created.
+    - For **`password`**, set the environment variable `AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE` to `/secrets/NOTIFIER_SMTP_PASSWORD` file with your **Gmail application password** that you have configured.
+    - For **`sender`**, enter your custom sender, e.g. `Authelia <authelia@dbdock.watertown>`.
+
+```yml
+.
+.
+.
+host: 0.0.0.0 # do not change this!
+port: 9091 # do not change this, this is Authelia internal port
+.
+.
+theme: light # there are 3 themes so choose one you like
+.
+.
+.
+jwt_secret: xxxxxxxxxxxx # generate a long random key value
+.
+.
+.
+totp:
+  issuer: yourdomain.com # enter what you want to see when using 2FA
+  period: 30
+  skew: 1
+.
+.
+.
+authentication_backend:
+  ldap:
+    implementation: custom
+    url: ldap://yourNASIP
+    start_tls: false
+    base_dn: dc=blackvoid,dc=home # enter the values from the LDAP config
+    additional_users_dn: cn=users
+    additional_groups_dn: cn=groups
+    groups_filter: (&(uniquemember={dn})(objectclass=groupOfUniqueNames))
+    user: uid=admin,cn=users,dc=blackvoid,dc=home # your LDAP parameters
+    password: xxxxxxxxxxx # LDAP Admin password
+.
+.
+.
+access_control:
+  default_policy: deny
+  networks:
+    - name: 'internal'
+      networks:
+        - '192.168.86.0/24'
+  rules:
+    ## Rules applied to user 'admin'
+    - domain: app1.yourdomain.com
+      subject: "user:admin"
+      policy: two_factor
+    - domain: app1.yourdomain.com
+      subject: "user:admin"
+      policy: one_factor
+      networks:
+        - 'internal'
+.
+.
+.
+session:
+  name: authelia_session
+  domain: yourdomain.com
+  same_site: lax
+  secret: xxxxxxxx # generate a long random key value
+.
+.
+.
+  redis:
+    host: NASIPAddres # something like 10.20.30.35
+    port: 6379 # port for REDIS docker contianer
+    database_index: 0 # change this if you already use REDIS for something
+.
+.
+.
+storage:
+  mysql:
+    host: yourNASIP
+    port: 3306 # mysql docker container port
+    database: authelia # change to the name you have configured
+    username: authelia_user # change to the user you have configured
+    password: xxxxxxxxxxxx # change to the password you have configured
+.
+.
+.
+notifier:
+  smtp:
+    username: usernameOfYourMail
+    password: xxxxxx
+    host: smtp.gmail.com # this is just an example
+    port: 587
+    sender: sender@domain.com
+```
+
+## 5.4. Install and configure ZeroTier One on iPhone
 
 This runbook should be performed by the Mobile User.
 
@@ -833,10 +988,7 @@ fi
 
 4. After restarting the `zt` container, check the node status:
   ```
-  sudo docker exec -it zt zerotier-cli status
-  ```
-  If successful, you should see the following:
-  ```
+  $ sudo docker exec -it zt zerotier-cli status
   200 info xxxxxx9857 1.8.10 ONLINE
   ```
 
@@ -846,6 +998,7 @@ The following resources were used as a single-use reference.
 
 | Title | Author | Publisher Date [Short Code]
 |---|---|---|
+| [Discussion: Authelia - SSO & 2FA portal](https://www.synoforum.com/threads/authelia-sso-2fa-portal.5952/) | Rusty | May 2021
 | [Authelia - SSO and 2FA portal](https://www.blackvoid.club/authelia-sso-and-2fa-portal/) | Luke Manestar | May 2021
 | [NGINX proxy manager](https://www.blackvoid.club/nginx-proxy-manager/) | Luke Manestar | Apr 2021
 | GitHub repo: [CLI client for Portainer](https://github.com/greenled/portainer-stack-utils) | Juan Carlos Mejías Rodríguez | Oct 2019

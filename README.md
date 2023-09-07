@@ -36,6 +36,7 @@ Starter project for your Synology NAS.
   - [Installing Ansible](#installing-ansible)
   - [Setting up LDAP on your Synology NAS](#setting-up-ldap-on-your-synology-nas)
   - [Setting up configuration.yml for Authelia stack](#setting-up-configurationyml-for-authelia-stack)
+  - [Setting up a cloudflared agent on your Synology NAS](#setting-up-a-cloudflared-agent-on-your-synology-nas)
   - [Install and configure ZeroTier One on iPhone](#install-and-configure-zerotier-one-on-iphone)
 - [Execution](#execution)
   - [Creating a basic inventory file](#creating-a-basic-inventory-file)
@@ -44,6 +45,7 @@ Starter project for your Synology NAS.
   - [Docker-compose Deployment with SSH](#docker-compose-deployment-with-ssh)
   - [Docker-compose Deployment with Portainer Stack](#docker-compose-deployment-with-portainer-stack)
   - [Docker-compose Deployment with Portainer Containers](#docker-compose-deployment-with-portainer-containers)
+  - [Adding a new route from Public Domain to your server](#adding-a-new-route-from-public-domain-to-your-server)
   - [Access and bookmark container apps from NAS on iPhone](#access-and-bookmark-container-apps-from-nas-on-iphone)
 - [Logging](#logging)
 - [Monitoring](#monitoring)
@@ -97,12 +99,14 @@ The audience for this document includes:
 | Installation & Configuration |                  Installing Ansible                   |             |     R,A      |
 | Installation & Configuration |         Setting up LDAP on your Synology NAS          |             |     R,A      |
 | Installation & Configuration |   Setting up `configuration.yml` for Authelia stack   |             |     R,A      |
+| Installation & Configuration | Setting up a `cloudflared` agent on your Synology NAS |             |     R,A      |
 |          Execution           |            Creating a basic inventory file            |             |     R,A      |
 |          Execution           |       Running your first Ad-Hoc Ansible command       |             |     R,A      |
 |          Execution           |              Your first Ansible playbook              |             |     R,A      |
 |          Execution           |          Docker-compose Deployment with SSH           |             |     R,A      |
 |          Execution           |    Docker-compose Deployment with Portainer Stack     |             |     R,A      |
 |          Execution           |  Docker-compose Deployment with Portainer Containers  |             |     R,A      |
+|          Execution           | Adding a new route from Public Domain to your server  |             |     R,A      |
 |           Updating           |                 Manually updating DSM                 |             |     R,A      |
 | Installation & Configuration |     Install and configure ZeroTier One on iPhone      |     R,A     |      C       |
 |          Execution           | Access and bookmark container apps from NAS on iPhone |     R,A     |              |
@@ -499,7 +503,38 @@ notifier:
     sender: sender@domain.com
 ```
 
-## 5.4. Install and configure ZeroTier One on iPhone
+## 5.4. Setting up a `cloudflared` agent on your Synology NAS
+This runbook should be performed by the DevSecOps.
+
+> Warning: You should perform this runbook for client-facing applications that do not contain sensitive data. For internal-facing applications or services, follow the runbook that uses a ZeroTier client.
+
+1. Navigate to your Synology DSM Console > Package Center > Settings > Package Sources.
+
+2. Click Add to add a new package source.
+  - For **Name**, enter `SynoCommunity`.
+  - For **Location**, enter `https://packages.synocommunity.com`.
+
+3. Click **OK**, then click **Community** in the left hand menu.
+
+4. Search for `cloudflared` package, then click **Install**.
+
+5. Before you can complete the installation, you will require a `cloudflared` registration token.
+
+6. Open a new browser tab, and navigate to your Cloudflare Console > Zero Trust > Access > Tunnels.
+
+7. Click **Create a tunnel**, then enter a Tunnel name, e.g. `dbdock-synocommunity-package-cloudflared`.
+
+8. Click **Save tunnel** to generate a registration token, then copy this token.
+
+9. Return to your browser tab Synology Console, then paste this token to complete the `cloudflared` package installation.
+
+10. If successful, you should see `cloudflared` package Running on your Synology NAS.
+
+11. Return to your browser tab Cloudflare Console, and you should see the status `HEALTHY` for your new tunnel.
+
+> Note: For the next step, you may expose multiple applications or services within your new tunnel by [Adding a new route from Public Domain to your server](#adding-a-new-route-from-public-domain-to-your-server).
+
+## 5.5. Install and configure ZeroTier One on iPhone
 
 This runbook should be performed by the Mobile User.
 
@@ -817,7 +852,30 @@ Navigate to **Env**, and click on **+ add environment variable**.
 Navigate to **Restart policy**, and select **Unless stopped**.
 
 ---
-## 6.7. Access and bookmark container apps from NAS on iPhone
+## 6.7. Adding a new route from Public Domain to your server
+
+This runbook should be performed by the DevSecOps.
+
+1. Navigate to your Cloudflare Console > Zero Trust > Access > Tunnels > select an existing tunnel.
+
+2. Click Configure > Public Hostname > click **Add a public hostname**.
+
+3. Enter the following values, under **Public hostname**:
+  - For **Subdomain**, enter your application name, e.g. `localstack`.
+  - For **Domain**, select an existing domain from the drop-down list, e.g. `markit.work`.
+
+4. Enter the following values, under **Service**:
+  - For **Type**, select `HTTP`.
+  - For **URL**, enter the LAN IP address and port of your application, e.g. `192.x.x.1:8080`.
+
+> Warning: You can only add a LAN IP address of an application that is hosted on the same server as your `cloudflared` agent.
+
+5. Leave the other fields as default values, and click **Save hostname**.
+
+6. Test the domain by navigating to the your new URL, e.g. `https://localstack.markit.work`.
+
+---
+## 6.8. Access and bookmark container apps from NAS on iPhone
 
 This runbook should be performed by the Mobile User.
 

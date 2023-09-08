@@ -37,6 +37,7 @@ Starter project for your Synology NAS.
   - [Setting up LDAP on your Synology NAS](#setting-up-ldap-on-your-synology-nas)
   - [Setting up configuration.yml for Authelia stack](#setting-up-configurationyml-for-authelia-stack)
   - [Setting up a cloudflared agent on your Synology NAS](#setting-up-a-cloudflared-agent-on-your-synology-nas)
+  - [Protecting the route from Public Domain to your server](#protecting-the-route-from-public-domain-to-your-server)
   - [Install and configure ZeroTier One on iPhone](#install-and-configure-zerotier-one-on-iphone)
 - [Execution](#execution)
   - [Creating a basic inventory file](#creating-a-basic-inventory-file)
@@ -94,23 +95,24 @@ The audience for this document includes:
 # 3. User Personas
 ## 3.1 RACI Matrix
 
-|           Category           |                       Activity                        | Mobile User | DSO Engineer |
-|:----------------------------:|:-----------------------------------------------------:|:-----------:|:------------:|
-| Installation & Configuration |                  Installing Ansible                   |             |     R,A      |
-| Installation & Configuration |         Setting up LDAP on your Synology NAS          |             |     R,A      |
-| Installation & Configuration |   Setting up `configuration.yml` for Authelia stack   |             |     R,A      |
-| Installation & Configuration | Setting up a `cloudflared` agent on your Synology NAS |             |     R,A      |
-|          Execution           |            Creating a basic inventory file            |             |     R,A      |
-|          Execution           |       Running your first Ad-Hoc Ansible command       |             |     R,A      |
-|          Execution           |              Your first Ansible playbook              |             |     R,A      |
-|          Execution           |          Docker-compose Deployment with SSH           |             |     R,A      |
-|          Execution           |    Docker-compose Deployment with Portainer Stack     |             |     R,A      |
-|          Execution           |  Docker-compose Deployment with Portainer Containers  |             |     R,A      |
-|          Execution           | Adding a new route from Public Domain to your server  |             |     R,A      |
-|           Updating           |                 Manually updating DSM                 |             |     R,A      |
-| Installation & Configuration |     Install and configure ZeroTier One on iPhone      |     R,A     |      C       |
-|          Execution           | Access and bookmark container apps from NAS on iPhone |     R,A     |              |
-|       Troubleshooting        |            Error Start container zt failed            |      I      |     R,A      |
+|           Category           |                        Activity                        | Mobile User | DSO Engineer |
+|:----------------------------:|:------------------------------------------------------:|:-----------:|:------------:|
+| Installation & Configuration |                   Installing Ansible                   |             |     R,A      |
+| Installation & Configuration |          Setting up LDAP on your Synology NAS          |             |     R,A      |
+| Installation & Configuration |   Setting up `configuration.yml` for Authelia stack    |             |     R,A      |
+| Installation & Configuration | Setting up a `cloudflared` agent on your Synology NAS  |             |     R,A      |
+| Installation & Configuration | Protecting the route from Public Domain to your server |             |     R,A      |
+|          Execution           |            Creating a basic inventory file             |             |     R,A      |
+|          Execution           |       Running your first Ad-Hoc Ansible command        |             |     R,A      |
+|          Execution           |              Your first Ansible playbook               |             |     R,A      |
+|          Execution           |           Docker-compose Deployment with SSH           |             |     R,A      |
+|          Execution           |     Docker-compose Deployment with Portainer Stack     |             |     R,A      |
+|          Execution           |  Docker-compose Deployment with Portainer Containers   |             |     R,A      |
+|          Execution           |  Adding a new route from Public Domain to your server  |             |     R,A      |
+|           Updating           |                 Manually updating DSM                  |             |     R,A      |
+| Installation & Configuration |      Install and configure ZeroTier One on iPhone      |     R,A     |      C       |
+|          Execution           | Access and bookmark container apps from NAS on iPhone  |     R,A     |              |
+|       Troubleshooting        |            Error Start container zt failed             |      I      |     R,A      |
 
 ---
 # 4. Requirements
@@ -534,7 +536,33 @@ This runbook should be performed by the DevSecOps.
 
 > Note: For the next step, you may expose multiple applications or services within your new tunnel by [Adding a new route from Public Domain to your server](#adding-a-new-route-from-public-domain-to-your-server).
 
-## 5.5. Install and configure ZeroTier One on iPhone
+## 5.5 Protecting the route from Public Domain to your server
+This runbook should be performed by the DevSecOps.
+
+Cloudflare Zero Trust enables you to protect your routes from Public Domain to your applications and services hosted on internal server, by setting up an Application Policy, which is similar to a web application firewall (WAF).
+
+1. Navigate to your Cloudflare Console > Zero Trust > Access > Applications.
+
+2. Click **Add an application**, and then select **Self-hosted** type.
+
+2. Enter the following values:
+  - For **Application name**, enter a name for the application policy, e.g. `dbdock-synocommunity-package-cloudflared`.
+  - For **Session Duration**, enter the length of each session, e.g. `24 hours`.
+
+3. Under the **Application domain**, enter one or more Public domains that you want to protect.
+  - For **Subdomain**, enter your Public subdomain, e.g. `localstack`.
+  - For **Domain**, select your Public domain from the drop-down list, e.g. `markit.work`.
+
+4. Click **Next**, for **Policy name**, enter a new policy, e.g. `default`.
+  - For **Action**, leave as Allow.
+
+5. Under **Configure rules**, add one or more **Include** rules to whitelist your users.
+  - For Selector, choose `Country`, and for Value, choose one or more countries from the drop-down list, e.g. `Singapore`.
+  - Click Add include, then for Selector, choose `Emails`, and for Value, enter one or more emails to whitelist.
+
+6. Click **Next**, leave all values as default, and click **Add application**.
+
+## 5.6. Install and configure ZeroTier One on iPhone
 
 This runbook should be performed by the Mobile User.
 
@@ -872,7 +900,15 @@ This runbook should be performed by the DevSecOps.
 
 5. Leave the other fields as default values, and click **Save hostname**.
 
-6. Test the domain by navigating to the your new URL, e.g. `https://localstack.markit.work`.
+6. Navigate to Cloudflare Console > Zero Trust > Access > select an existing application policy name.
+
+7. Click Configure > Policies, select a policy name, e.g. `default` > click **Overview**.
+
+8. Under Application domain, click **Add domain**.
+  - For **Subdomain**, enter your application name, e.g. `localstack`.
+  - For **Domain**, select an existing domain from the drop-down list, e.g. `markit.work`.
+
+9. Test the domain by navigating to the your new URL, e.g. `https://localstack.markit.work`.
 
 ---
 ## 6.8. Access and bookmark container apps from NAS on iPhone

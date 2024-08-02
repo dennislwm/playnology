@@ -12,26 +12,33 @@ Starter project for your Synology NAS.
 - [System Overview](#system-overview)
   - [Benefits and Values](#benefits-and-values)
   - [Limitations](#limitations)
+  - [Security](#security)
+    - [Tailscale](#tailscale)
 - [User Personas](#user-personas)
   - [RACI Matrix](#raci-matrix)
 - [Requirements](#requirements)
   - [Synology](#synology)
     - [Changing SSH Password](#changing-ssh-password)
       - [Enabling SSH](#enabling-ssh)
-      - [Temporarily Enabling Telnet](#temporarily-enabling-telnet)
+      - [Temporarily Enabling Telnet Deprecated](#temporarily-enabling-telnet-deprecated)
     - [Connecting via SSH](#connecting-via-ssh)
     - [Installing Portainer](#installing-portainer)
     - [Adding Docker container](#adding-docker-container)
-      - [Using Docker Compose](#using-docker-compose)
-    - [Prevent Synology Listening on Port 80/443](#prevent-synology-listening-on-port-80443)
-    - [Dangerous](#dangerous)
+      - [Using Docker Compose Deprecated](#using-docker-compose-deprecated)
+    - [Prevent Synology Listening on Port 80/443 Deprecated](#prevent-synology-listening-on-port-80443-deprecated)
+    - [Dangerous Deprecated](#dangerous-deprecated)
     - [Using Portainer](#using-portainer)
       - [Basic Container Settings](#basic-container-settings)
       - [Advanced Container Settings](#advanced-container-settings)
-    - [NGINX Proxy Manager](#nginx-proxy-manager)
+    - [NGINX Proxy Manager Deprecated](#nginx-proxy-manager-deprecated)
       - [Enabling Port Forwarding on Router](#enabling-port-forwarding-on-router)
   - [ZeroTier One](#zerotier-one)
     - [iPhone](#iphone)
+  - [Tailscale](#tailscale)
+    - [SaaS](#saas)
+    - [iPhone](#iphone)
+    - [macOS](#macos)
+    - [Synology](#synology)
 - [Installation and Configuration](#installation-and-configuration)
   - [Installing Ansible](#installing-ansible)
   - [Setting up LDAP on your Synology NAS](#setting-up-ldap-on-your-synology-nas)
@@ -91,28 +98,53 @@ The audience for this document includes:
 
 1. DSM 7.2 has stopped support for Docker.
 
+## 2.3. Security
+
+### Tailscale
+
+* Device Approval: requires new devices to be approved before they can access the network.
+* Key Expiry: set the number of days (1-180) a device can stay logged in to Tailscale before it needs to reauthenticate.
+* User Approval: requires new users to be approved before they can access the network.
+
 ---
 # 3. User Personas
 ## 3.1 RACI Matrix
 
-|           Category           |                        Activity                        | Mobile User | DSO Engineer |
-|:----------------------------:|:------------------------------------------------------:|:-----------:|:------------:|
-| Installation & Configuration |                   Installing Ansible                   |             |     R,A      |
-| Installation & Configuration |          Setting up LDAP on your Synology NAS          |             |     R,A      |
-| Installation & Configuration |   Setting up `configuration.yml` for Authelia stack    |             |     R,A      |
-| Installation & Configuration | Setting up a `cloudflared` agent on your Synology NAS  |             |     R,A      |
-| Installation & Configuration | Protecting the route from Public Domain to your server |             |     R,A      |
-|          Execution           |            Creating a basic inventory file             |             |     R,A      |
-|          Execution           |       Running your first Ad-Hoc Ansible command        |             |     R,A      |
-|          Execution           |              Your first Ansible playbook               |             |     R,A      |
-|          Execution           |           Docker-compose Deployment with SSH           |             |     R,A      |
-|          Execution           |     Docker-compose Deployment with Portainer Stack     |             |     R,A      |
-|          Execution           |  Docker-compose Deployment with Portainer Containers   |             |     R,A      |
-|          Execution           |  Adding a new route from Public Domain to your server  |             |     R,A      |
-|           Updating           |                 Manually updating DSM                  |             |     R,A      |
-| Installation & Configuration |      Install and configure ZeroTier One on iPhone      |     R,A     |      C       |
-|          Execution           | Access and bookmark container apps from NAS on iPhone  |     R,A     |              |
-|       Troubleshooting        |            Error Start container zt failed             |      I      |     R,A      |
+|           Category           |                           Activity                            | Mobile User | DSO Engineer |
+|:----------------------------:|:-------------------------------------------------------------:|:-----------:|:------------:|
+| Installation & Configuration |                   [Installing Ansible][i01]                   |             |     R,A      |
+| Installation & Configuration |          [Setting up LDAP on your Synology NAS][i02]          |             |     R,A      |
+| Installation & Configuration |   [Setting up `configuration.yml` for Authelia stack][i03]    |             |     R,A      |
+| Installation & Configuration | [Setting up a `cloudflared` agent on your Synology NAS][i04]  |             |     R,A      |
+| Installation & Configuration | [Protecting the route from Public Domain to your server][i05] |             |     R,A      |
+|          Execution           |            [Creating a basic inventory file][e01]             |             |     R,A      |
+|          Execution           |       [Running your first Ad-Hoc Ansible command][e02]        |             |     R,A      |
+|          Execution           |              [Your first Ansible playbook][e03]               |             |     R,A      |
+|          Execution           |           [Docker-compose Deployment with SSH][e04]           |             |     R,A      |
+|          Execution           |     [Docker-compose Deployment with Portainer Stack][e05]     |             |     R,A      |
+|          Execution           |  [Docker-compose Deployment with Portainer Containers][e06]   |             |     R,A      |
+|          Execution           |  [Adding a new route from Public Domain to your server][e07]  |             |     R,A      |
+|           Updating           |                 [Manually updating DSM][m01]                  |             |     R,A      |
+| Installation & Configuration |      [Install and configure ZeroTier One on iPhone][i06]      |     R,A     |      C       |
+|          Execution           | [Access and bookmark container apps from NAS on iPhone][e08]  |     R,A     |              |
+|       Troubleshooting        |            [Error Start container zt failed][t01]             |      I      |     R,A      |
+
+[i01]: #51-installing-ansible
+[i02]: #52-setting-up-ldap-on-your-synology-nas
+[i03]: #53-setting-up-configurationyml-for-authelia-stack
+[i04]: #54-setting-up-a-cloudflared-agent-on-your-synology-nas
+[i05]: #55-protecting-the-route-from-public-domain-to-your-server
+[i06]: #56-install-and-configure-zerotier-one-on-iphone
+[e01]: #61-creating-a-basic-inventory-file
+[e02]: #62-running-your-first-ad-hoc-ansible-command
+[e03]: #63-your-first-ansible-playbook
+[e04]: #64-docker-compose-deployment-with-ssh
+[e05]: #65-docker-compose-deployment-with-portainer-stack
+[e06]: #66-docker-compose-deployment-with-portainer-containers
+[e07]: #67-adding-a-new-route-from-public-domain-to-your-server
+[e08]: #68-access-and-bookmark-container-apps-from-nas-on-iphone
+[m01]: #91-manually-updating-disk-station-manager-dsm
+[t01]: #105-error-start-container-zt-failed
 
 ---
 # 4. Requirements
@@ -125,7 +157,8 @@ You can enable SSH service from the `Control Panel`. Go to `Terminal & SNMP` and
 
 After enabling SSH service, you will find out that you are unable to login with the admin password on the Synology web interface. We will need to temporarily enable Telnet service to fix this problem.
 
-#### Temporarily Enabling Telnet
+#### Temporarily Enabling Telnet (Deprecated)
+<details><summary>Click here to Temporarily Enabling Telnet (Deprecated).</summary><br>
 
 Under the previous `Terminal & SNMP`, check the box `Enable Telnet service` and click `Apply`. You have to connect to both Telnet and SSH on the LAN because it doesn't work with Quickconnect.
 
@@ -142,8 +175,10 @@ If it doesn't work the first time, try again. After changing the password, you s
 Return to your Synology `Control Panel`, and disable the Telnet service.
 
 *Warning: Changing the `admin` password using Task Scheduler did not work.*
+</details>
 
 ### 4.1.2. Connecting via SSH
+<details><summary>Click here to Connecting via SSH.</summary><br>
 
 Using the app iTerminal, create an SSH connection specifying your IP address on port 22. Login using admin and your password, and type EXACT:
 
@@ -152,8 +187,10 @@ $ sudo ln -s /var/run/docker.sock /volume1/docker/docker.sock
 ```
 
 *Warning: Even after creating the symlink you cannot create the container from the Docker UI. This is because symlinks are not listed when trying to create a volume/file link.*
+</details>
 
 ### 4.1.3. Installing Portainer
+<details><summary>Click here to Installing Portainer.</summary><br>
 
 The Synology Docker UI is nice but lacks some functionality such as Stacks, Templates, etc. Portainer will run seamlessly along side the Synology Docker UI.
 
@@ -176,6 +213,7 @@ docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /va
 Now check to see if it worked, you need to access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000. Create the admin user and password.
 
 Once logged in, select the **Local** environment and press the **Connect** button. You should be able to see a Dashboard of all your Docker files.
+</details>
 
 ### 4.1.4. Adding Docker container
 
@@ -184,7 +222,8 @@ There are two methods to pull a new Docker image and add a running container:
 1. Using Docker Compose
 2. Using Portainer
 
-#### Using Docker Compose
+#### Using Docker Compose (Deprecated)
+<details><summary>Click here to Using Docker Compose (Deprecated).</summary><br>
 
 First, login to your Synology via SSH as `admin` (password is same as your Synology Web Interface). Your `$HOME` directory should be `/var/services/homes/admin`.
 
@@ -271,8 +310,10 @@ Run the `docker-compose` command within the same folder.
 ```
 sudo docker-compose up -d
 ```
+</details>
 
-### 4.1.5. Prevent Synology Listening on Port 80/443
+### 4.1.5. Prevent Synology Listening on Port 80/443 (Deprecated)
+<details><summary>Click here to Prevent Synology Listening on Port 80/443 (Deprecated).</summary><br>
 
 Synology DSM is configured to run on both default ports 5000 and 5001. However, it's listening on ports 80 and 443 for redirection.
 
@@ -282,8 +323,10 @@ In order to free ports 80 and 443, we will replace these ports with 82 and 444, 
 sudo sed -i -e 's/80/82/' -e 's/443/444/' /usr/syno/share/nginx/server.mustache /usr/syno/share/nginx/DSM.mustache /usr/syno/share/nginx/WWWService.mustache
 sudo synoservicecfg --restart nginx
 ```
+</details>
 
-### 4.1.6. Dangerous
+### 4.1.6. Dangerous (Deprecated)
+<details><summary>Click here to Dangerous (Deprecated).</summary><br>
 
 Alternatively, if we want to stop NGINX server we won't need to replace ports 80 and 443.
 
@@ -304,8 +347,10 @@ sudo synoservice --restart DSM
 ```
 
 *Warning: Synology DSM depends on NGINX server.*
+</details>
 
 ### 4.1.7. Using Portainer
+<details><summary>Click here to Using Portainer.</summary><br>
 
 Access the Portainer container from your LAN, i.e. [PRIVATE_IP], on port 9000, and login as `admin`.
 
@@ -326,12 +371,15 @@ Map container path `/data` to host volume `teedy_vol_data`.
 Click on `Network` and then select `nginxpm_net_public`.
 
 Click on `Deploy the container`.
+</details>
 
-### 4.1.8. NGINX Proxy Manager
+### 4.1.8. NGINX Proxy Manager (Deprecated)
+<details><summary>Click here to NGINX Proxy Manager (Deprecated).</summary><br>
 
 #### Enabling Port Forwarding on Router
 
 You may need to enable port forwarding on both your Google Home WiFi and router.
+</details>
 
 ---
 ## 4.2. ZeroTier One
@@ -341,8 +389,39 @@ You may need to enable port forwarding on both your Google Home WiFi and router.
 [Download on the App Store](https://www.zerotier.com/download/)
 
 ---
+## 4.3. Tailscale
+
+### SaaS
+
+* [Create a Tailscale account](https://tailscale.com)
+  * Free tier (Personal) account has up to 3 users with public domain and up to 100 devices.
+    * SSO with any IdP
+    * User Approval
+    * Network, Resource-level, and Attribute-based ACLs
+    * MagicDNS
+    * Peer-to-Peer Connections
+  * Todos:
+    * Set up DNS: Tailscale gives devices `100.x.y.z` IP addresses, but you can also set up DNS to more easily connect to your devices.
+    * Share a node: Sharing lets you give a Tailscale user on another network access to a device within your network, without exposing it publicly.
+    * Set up access controls: By default, every device can talk to every device. You can define rules to limit which devices can talk to each other.
+    * Set up Taildrop: Taildrop lets you send files between your personal devices on a Tailscale network (known as a tailnet).
+
+### iPhone
+
+* [Download on the App Store](https://apps.apple.com/us/app/tailscale/id1470499037?ls=1)
+
+### macOS
+
+* [Download on the Mac App Store](https://apps.apple.com/ca/app/tailscale/id1475387142?mt=12)
+
+### Synology
+
+* [Download from Synology Package Center](https://tailscale.com/kb/1131/synology#install-using-synology-package-center)
+
+---
 # 5. Installation and Configuration
 ## 5.1. Installing Ansible
+<details><summary>Click here to Installing Ansible.</summary><br>
 
 **Ansible**'s only real dependency is Python. Once Python is installed, the simplest way to get Ansible running is to use `pip`.
 
@@ -353,8 +432,10 @@ pip install ansible
 > You must enable SSH remote connection on your Synology NAS before running Ansible commands. You can follow the steps in this article:
 >
 > [Configure the SSH server on your Synology NAS](https://flatpacklinux.com/2020/01/07/configure-the-ssh-server-on-your-synology-nas)
+</details>
 
 ## 5.2. Setting up LDAP on your Synology NAS
+<details><summary>Click here to Setting up LDAP on your Synology NAS.</summary><br>
 
 This runbook should be performed by the DevSecOps.
 
@@ -373,10 +454,12 @@ The benefit of running LDAP on your server is single sign-on (SSO). For services
 5. Click **Apply**.
 
 6. Under Authentication Information, you should see that your **Base DN** and **Bind DN** are now configured.
+</details>
 
 ## 5.3. Setting up `configuration.yml` for Authelia stack
 
 This runbook should be performed by the DevSecOps.
+<details><summary>Click here to Setting up `configuration.yml` for Authelia stack.</summary><br>
 
 Before we can fire up an Authelia stack on Portainer, we need to have its `configuration.yml` file ready and configured towards your Synology NAS environment.
 
@@ -504,9 +587,11 @@ notifier:
     port: 587
     sender: sender@domain.com
 ```
+</details>
 
 ## 5.4. Setting up a `cloudflared` agent on your Synology NAS
 This runbook should be performed by the DevSecOps.
+<details><summary>Click here to Setting up a `cloudflared` agent on your Synology NAS.</summary><br>
 
 > Warning: You should perform this runbook for client-facing applications that do not contain sensitive data. For internal-facing applications or services, follow the runbook that uses a ZeroTier client.
 
@@ -535,8 +620,11 @@ This runbook should be performed by the DevSecOps.
 11. Return to your browser tab Cloudflare Console, and you should see the status `HEALTHY` for your new tunnel.
 
 > Note: For the next step, you may expose multiple applications or services within your new tunnel by [Adding a new route from Public Domain to your server](#adding-a-new-route-from-public-domain-to-your-server).
+</details>
 
 ## 5.5 Protecting the route from Public Domain to your server
+<details><summary>Click here to Protecting the route from Public Domain to your server.</summary><br>
+
 This runbook should be performed by the DevSecOps.
 
 Cloudflare Zero Trust enables you to protect your routes from Public Domain to your applications and services hosted on internal server, by setting up an Application Policy, which is similar to a web application firewall (WAF).
@@ -561,8 +649,10 @@ Cloudflare Zero Trust enables you to protect your routes from Public Domain to y
   - Click Add include, then for Selector, choose `Emails`, and for Value, enter one or more emails to whitelist.
 
 6. Click **Next**, leave all values as default, and click **Add application**.
+</details>
 
 ## 5.6. Install and configure ZeroTier One on iPhone
+<details><summary>Click here to Install and configure ZeroTier One on iPhone.</summary><br>
 
 This runbook should be performed by the Mobile User.
 
@@ -576,10 +666,12 @@ This runbook should be performed by the Mobile User.
 
 4. Click on **Add Network**.
   - Check that the Status is `OK`.
+</details>
 
 ---
 # 6. Execution
 ## 6.1. Creating a basic inventory file
+<details><summary>Click here to Creating a basic inventory file.</summary><br>
 
 Ansible uses an inventory file (basically, a list of servers) to communicate with your servers. Create a file `hosts` in your project root folder and add one server to it:
 
@@ -589,9 +681,11 @@ Ansible uses an inventory file (basically, a list of servers) to communicate wit
 ```
 
 The `wifi` is an arbitrary name for the group of servers you're managing, followed by the IP addresses of your servers, one per line. If you're not using port 22 for SSH, you will need to append it to the address.
+</details>
 
 ---
 ## 6.2. Running your first Ad-Hoc Ansible command
+<details><summary>Click here to Running your first Ad-Hoc Ansible command.</summary><br>
 
 Now that you've installed Ansible and created an inventory file, it's time to run a command:
 
@@ -623,9 +717,11 @@ The previous command would now be:
 ```sh
 ansible <group> -i ./hosts -m ping
 ```
+</details>
 
 ---
 ## 6.3. Your first Ansible playbook
+<details><summary>Click here to Your first Ansible playbook.</summary><br>
 
 Create a folder `plays/` and add a file `check-linux-system-playbook.yml` in that folder. Copy and paste the following code:
 
@@ -643,9 +739,11 @@ Now that you've created your first Ansible playbook, it is time to run it.
 ```sh
 ansible-playbook -i ./hosts plays/check-linux-system-playbook.yml
 ```
+</details>
 
 ---
 ## 6.4. Docker-compose Deployment with SSH
+<details><summary>Click here to Docker-compose Deployment with SSH.</summary><br>
 
 1. Open a local terminal and remote SSH to your Synology NAS.
 
@@ -672,9 +770,11 @@ cat /etc/passwd | grep 1000
 ```sh
 docker exec -it paperlessng_webserver_1 python3 /usr/src/paperless/src/manage.py createsuperuser --username=admin --
 ```
+</details>
 
 ---
 ## 6.5. Docker-compose Deployment with Portainer Stack
+<details><summary>Click here to Docker-compose Deployment with Portainer Stack.</summary><br>
 
 1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
 
@@ -809,9 +909,11 @@ python3 /usr/src/paperless/src/manage.py createsuperuser --username=admin
 This command will create a superuser `admin`. Enter your email and password when prompted. Type `exit` when done.
 
 5. Navigate to the **Container status**, and click on **Logs**. Check if there are any errors in the log.
+</details>
 
 ---
 ## 6.6. Docker-compose Deployment with Portainer Containers
+<details><summary>Click here to Docker-compose Deployment with Portainer Containers.</summary><br>
 
 1. Navigate and login to Portainer UI, e.g. http://localhost:9000, then click on **Local**.
 
@@ -878,9 +980,11 @@ Navigate to **Env**, and click on **+ add environment variable**.
 - value: 1000
 
 Navigate to **Restart policy**, and select **Unless stopped**.
+</details>
 
 ---
 ## 6.7. Adding a new route from Public Domain to your server
+<details><summary>Click here to Adding a new route from Public Domain to your server.</summary><br>
 
 This runbook should be performed by the DevSecOps.
 
@@ -909,9 +1013,11 @@ This runbook should be performed by the DevSecOps.
   - For **Domain**, select an existing domain from the drop-down list, e.g. `markit.work`.
 
 9. Test the domain by navigating to the your new URL, e.g. `https://localstack.markit.work`.
+</details>
 
 ---
 ## 6.8. Access and bookmark container apps from NAS on iPhone
+<details><summary>Click here to Access and bookmark container apps from NAS on iPhone.</summary><br>
 
 This runbook should be performed by the Mobile User.
 
@@ -923,6 +1029,7 @@ This runbook should be performed by the Mobile User.
 2. You should see the home page of your container app.
 
 3. Bookmark the page on your browser.
+</details>
 
 ---
 # 7. Logging
@@ -933,6 +1040,7 @@ This runbook should be performed by the Mobile User.
 ---
 # 9. Updating
 ## 9.1. Manually updating Disk Station Manager (DSM)
+<details><summary>Click here to Manually updating Disk Station Manager (DSM).</summary><br>
 
 This runbook should be performed by the DevSecOps Engineer.
 
@@ -943,8 +1051,10 @@ This runbook should be performed by the DevSecOps Engineer.
 3. After download has completed successfully, click on **Update Now**.
 
 4. The update may restart the device including all services and packages once the update is complete.
+</details>
 
 ## 9.2. Manually installing additional RAM in Synology DS920+
+<details><summary>Click here to Manually installing additional RAM in Synology DS920+.</summary><br>
 
 This runbook should be performed by the DevSecOps Engineer.
 
@@ -963,10 +1073,12 @@ This runbook should be performed by the DevSecOps Engineer.
 6. Insert all the HDD trays in the same order as before.
 
 7. Start your Synology NAS and check your new memory size.
+</details>
 
 ---
 # 10. Troubleshooting
 ## 10.1 Using SSH connection type with passwords
+<details><summary>Click here to troubleshoot Using SSH connection type with passwords.</summary><br>
 
 If you get this error when using option ` -k` to ask for connection password, you must install the sshpass program.
 
@@ -985,8 +1097,10 @@ For macOS, you will need to install **Xcode** and command line tools then use th
 ```sh
 brew install hudochenkov/sshpass/sshpass
 ```
+</details>
 
 ## 10.2. Too many authentication failure
+<details><summary>Click here to troubleshoot Too many authentication failure.</summary><br>
 
 If you get the following SSH Error:
 
@@ -1001,9 +1115,11 @@ So if you have a number of private keys in your .ssh directory you could disable
 ```sh
 ssh -o PubkeyAuthentication=no <user>@<serverip>
 ```
+</details>
 
 ---
 ## 10.3. You are still asked by SSH to enter a password
+<details><summary>Click here to troubleshoot You are still asked by SSH to enter a password.</summary><br>
 
 SSH to your server and change the following permissions:
 
@@ -1012,9 +1128,11 @@ chmod 755 $HOME
 chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 ```
+</details>
 
 ---
 ## 10.4. Missing sudo password
+<details><summary>Click here to troubleshoot Missing sudo password.</summary><br>
 
 If you get the following error:
 
@@ -1031,9 +1149,12 @@ admin ALL=(ALL) NOPASSWD:ALL
 ```
 
 You have enabled superuser for your Ansible commands.
+</details>
 
 ---
 ## 10.5. Error Start container zt failed
+
+<details><summary>Click here to troubleshoot Error Start container zt failed.</summary><br>
 
 > Note: Synology DSM 6 `root` account has been hardened. You can no longer SSH using `root`, however you can still `sudo -i` after logging in as any member account of the administrators group.
 
@@ -1085,6 +1206,7 @@ fi
   $ sudo docker exec -it zt zerotier-cli status
   200 info xxxxxx9857 1.8.10 ONLINE
   ```
+</details>
 
 ---
 # 11. References

@@ -1,0 +1,23 @@
+version: '3.3'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: objPrometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ~/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - vol_prometheus:/prometheus:rw
+    networks:
+      - nginxpmlite_net_public
+
+volumes: 
+  vol_prometheus:
+  # Named volumes are stored in a part of the host filesystem 
+  # which is managed by Docker (/var/lib/docker/volumes/ on Linux)
+  # Docker appends [FOLDER] name to named volumes.
+  #   <folder>_<vol_name>
+
+networks:
+  nginxpmlite_net_public:
+    external: true    
